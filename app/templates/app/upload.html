@@ -1,0 +1,33 @@
+{% extends 'app/base.html' %}
+
+{% block content %}
+
+<form method="POST" class="post-form">
+    {% csrf_token %}
+    <p>取引先選択</p>
+    {{ form.customer }}
+
+
+    <p>ブライセンデータ選択</p>
+<div class="input-group">
+  <div class="custom-file">
+    <input type="file" class="custom-file-input" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04">
+    <label class="custom-file-label" for="inputGroupFile04">Choose file</label>
+  </div>
+
+</div>
+    <p>電子データ選択</p>
+<div class="input-group">
+  <div class="custom-file">
+    <input type="file" class="custom-file-input" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04">
+    <label class="custom-file-label" for="inputGroupFile04">Choose file</label>
+  </div>
+
+</div>
+    <p><div><button type="submit" class="btn btn-outline-primary">CSVデータ作成</button></div></p>
+
+
+
+
+
+{% endblock %}
