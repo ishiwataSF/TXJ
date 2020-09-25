@@ -9,3 +9,4 @@ db.mysql
 manage.py
 .id_rsa_github.pub.swp
 git/
+media/
