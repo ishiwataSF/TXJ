@@ -1,49 +1,15 @@
 {% extends 'app/base.html' %}
 
 {% block content %}
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.customer.label_tag}}
-        {{ form.customer }}
-        <div class="select-button" style="float: right;"><button type="submit" class="btn btn-outline-primary">save</button></div>
-    </form>
-
-
-        <!-- POSTできるようになったら、実装する
-        <div class="input-group mb-3">
-          <select class="custom-select" id="inputGroupSelect01">
-            <option selected>Choose...</option>
-            <option value="1">TXJ支店</option>
-            <option value="2">TXJ工場</option>
-            <option value="3">九州産交</option>
-          </select>
-        </div>
-
-        <p><div class="brycen-file">
-        ブライセンデータ選択
-            <div class="input-group">
-              <div class="custom-file">
-                <input type="file" class="custom-file-input" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04">
-                <label class="custom-file-label" for="inputGroupFile04">Choose file</label>
-              </div>
-            </div>
-        </div></p>
-        <div class="billing-file">
-        電子データ選択
-            <div class="input-group">
-              <div class="custom-file">
-                <input type="file" class="custom-file-input" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04">
-                <label class="custom-file-label" for="inputGroupFile04">Choose file</label>
-              </div>
-            </div>
-        </div> -->
 
 
 
-
-
-
-
-
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label>取引先を選択してください。<br>選択した取引先は次ページに反映されます。</label><br>
+    {{ form.customer }}<br><br>
+    <div class="select-button"><button type="submit" class="btn btn-outline-primary">save</button></div><br>
+    ※saveを押すと、案件NO.が付番されます。
+</form>
 
 {% endblock %}

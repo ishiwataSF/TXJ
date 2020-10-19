@@ -1,3 +1,30 @@
-.csv-save{
-    float: right;
+.page-header a{
+color: #ffffff;
 }
+
+.page-header {
+/*Lobster*/
+color: #ffffff;
+background-color: #20b2aa;
+width:auto;
+margin-right: auto;
+margin-top: 0;
+padding: 20px 40px;
+}
+
+
+.side-bar{
+float: right;
+}
+
+.content {
+padding: 10px;
+}
+
+
+
+.card card-body button {
+width: 100px;
+}
+
+

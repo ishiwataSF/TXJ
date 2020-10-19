@@ -1,5 +1,5 @@
 {% load static %}
-<html>
+<html lang="en">
     <head>
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
@@ -10,88 +10,118 @@
     </head>
 
     <body>
-        <div class="page-header" style="float: right;">
-            <div class="status">
-                <p><button type="button" class="btn btn-info">status_type</button></p>
-            </div>
-            <div class="navi">
-                <div class="accordion" id="accordion" role="tablist" aria-multiselectable="true">
-                <div class="card" style="width: 23rem;">
-                  <h5 class="card-header">
-                    ステータスの説明
-                  </h5>
-                  <div class="card">
-                    <div class="card-header" role="tab" id="headingOne">
-                      <h class="mb-0">
-                        <a class="text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapseOne" role="button" aria-expanded="true" aria-controls="collapseOne">
-                          未アップロード
-                        </a>
-                      </h>
-                    </div><!-- /.card-header -->
-                    <div id="collapseOne" class="collapse show" role="tabpanel" aria-labelledby="headingOne" data-parent="#accordion">
-                      <div class="card-body">
-                        ファイルを選択し、<br>CSVデータ作成を押してください。
-                      </div><!-- /.card-body -->
-                    </div><!-- /.collapse -->
-                  </div><!-- /.card -->
-                  <div class="card">
-                    <div class="card-header" role="tab" id="headingTwo">
-                      <h class="mb-0">
-                        <a class="collapsed text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapseTwo" role="button" aria-expanded="false" aria-controls="collapseTwo">
-                          CSV出力済
-                        </a>
-                      </h>
-                    </div><!-- /.card-header -->
-                    <div id="collapseTwo" class="collapse" role="tabpanel" aria-labelledby="headingTwo" data-parent="#accordion">
-                      <div class="card-body">
-                        重複行を削除したCSVを出力しました。<br>
-                        出力されたCSVとブライセン画面との<br>
-                        目視確認を行ってください。
-                      </div><!-- /.card-body -->
-                    </div><!-- /.collapse -->
-                  </div><!-- /.card -->
-                  <div class="card">
-                    <div class="card-header" role="tab" id="headingThree">
-                      <h class="mb-0">
-                        <a class="collapsed text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapseThree" role="button" aria-expanded="false" aria-controls="collapseThree">
-                          目視確認済
-                        </a>
-                      </h>
-                    </div><!-- /.card-header -->
-                    <div id="collapseThree" class="collapse" role="tabpanel" aria-labelledby="headingThree" data-parent="#accordion">
-                      <div class="card-body">
-                        CSVデータの修正有無を確認の上、<br>
-                        該当のチェックボックスを押してください。
-                      </div><!-- /.card-body -->
-                    </div><!-- /.collapse -->
-                  </div><!-- /.card -->
-                  <div class="card">
-                    <div class="card-header" role="tab" id="headingFour">
-                      <h class="mb-0">
-                        <a class="collapsed text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapseFour" role="button" aria-expanded="false" aria-controls="collapseFour">
-                          インポートデータ出力済
-                        </a>
-                      </h>
-                    </div><!-- /.card-header -->
-                    <div id="collapseFour" class="collapse" role="tabpanel" aria-labelledby="headingFour" data-parent="#accordion">
-                      <div class="card-body">
-                        インポートデータを出力しました。<br>
-                        データを確認の上、ブライセンへインポート<br>
-                        してください。
-                      </div><!-- /.card-body -->
-                    </div><!-- /.collapse -->
-                  </div><!-- /.card -->
-                </div>
-                </div>
-            </div>
+<div class="page-header"><a href="{% url 'top' %}" style="color: #ffffff;">TOP</a></div><br>
+{% if not request.path == '/' %}
+<div class="side-bar" style="margin: auto; padding: 20px 20px 20px 30px;">
+    <div class="status">
+        {% if request.path == '/customer_select/' %}
+        <p><button type="button" class="btn btn-info">ステータス：取引先選択</button></p>
+        {% elif status is 0 %}
+        <p><button type="button" class="btn btn-info">ステータス：未アップロード</button></p>
+        {% elif status is 1 %}
+        <p><button type="button" class="btn btn-info">ステータス：CSV出力済</button></p>
+        {% elif status is 2 %}
+        <p><button type="button" class="btn btn-info">ステータス：目視確認済</button></p>
+        {% elif status is 3 %}
+        <p><button type="button" class="btn btn-info">ステータス：インポートデータ出力済</button></p>
+        {% endif %}
+    </div>
+    <div class="navi">
+        <!--<div class="accordion" id="accordion" role="tablist" aria-multiselectable="true">-->
+        <div class="accordion" id="accordion">
+        <div class="card" style="width: 23rem;">
+          <h5 class="card-header">
+            ステータスの説明
+          </h5>
+          <div class="card">
+            <div class="card-header" role="tab" id="heading">
+              <h class="mb-0">
+                <a class="text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapse" role="button" aria-expanded="true" aria-controls="collapse">
+                  取引先選択
+                </a>
+              </h>
+            </div><!-- /.card-header -->
+             <div id="collapse" class="collapse{% if request.path == '/customer_select/' %}show{% endif %}" role="tabpanel" aria-labelledby="heading" data-parent="#accordion">
+                 <div class="card-body">
+                作成したいインポートデータの取引先を<br>選択してください。
+                </div><!-- /.card-body -->
+            </div><!-- /.collapse -->
+          </div><!-- /.card -->
+          <div class="card">
+            <div class="card-header" role="tab" id="headingOne">
+              <h class="mb-0">
+                <a class="text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapseOne" role="button" aria-expanded="true" aria-controls="collapseOne">
+                  未アップロード
+                </a>
+              </h>
+            </div><!-- /.card-header -->
+             <div id="collapseOne" class="collapse{% if status is 0 %}show{% endif %}" role="tabpanel" aria-labelledby="headingOne" data-parent="#accordion">
+                 <div class="card-body">
+                ファイルを選択し、<br>uploadを押してください。
+                </div><!-- /.card-body -->
+            </div><!-- /.collapse -->
+          </div><!-- /.card -->
+          <div class="card">
+            <div class="card-header" role="tab" id="headingTwo">
+              <h class="mb-0">
+                <a class="collapsed text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapseTwo" role="button" aria-expanded="false" aria-controls="collapseTwo">
+                  CSV出力済
+                </a>
+              </h>
+            </div><!-- /.card-header -->
+            <div id="collapseTwo" class="collapse{% if status is 1 %}show{% endif %}" role="tabpanel" aria-labelledby="headingTwo" data-parent="#accordion">
+              <div class="card-body">
+                重複行を削除したCSVを出力しました。<br>
+                出力されたCSVとブライセン画面との<br>
+                目視確認を行ってください。<br><br>
+                ※目視確認後は「目視確認画面へ」を押下後「目視確認済」を押してください。
+              </div><!-- /.card-body -->
+            </div><!-- /.collapse -->
+          </div><!-- /.card -->
+          <div class="card">
+            <div class="card-header" role="tab" id="headingThree">
+              <h class="mb-0">
+                <a class="collapsed text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapseThree" role="button" aria-expanded="false" aria-controls="collapseThree">
+                  目視確認済
+                </a>
+              </h>
+            </div><!-- /.card-header -->
+            <div id="collapseThree" class="collapse{% if status is 2 %}show{% endif %}" role="tabpanel" aria-labelledby="headingThree" data-parent="#accordion">
+              <div class="card-body">
+                CSVデータの修正有無を確認の上、<br>
+                該当のラジオボタンを押してください。
+              </div><!-- /.card-body -->
+            </div><!-- /.collapse -->
+          </div><!-- /.card -->
+          <div class="card">
+            <div class="card-header" role="tab" id="headingFour">
+              <h class="mb-0">
+                <a class="collapsed text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapseFour" role="button" aria-expanded="false" aria-controls="collapseFour">
+                  インポートデータ出力済
+                </a>
+              </h>
+            </div><!-- /.card-header -->
+            <div id="collapseFour" class="collapse{% if status is 3 %}show{% endif %}" role="tabpanel" aria-labelledby="headingFour" data-parent="#accordion">
+              <div class="card-body">
+                インポートデータを出力しました。<br>
+                データを確認の上、ブライセンへインポート<br>
+                してください。
+              </div><!-- /.card-body -->
+            </div><!-- /.collapse -->
+          </div><!-- /.card -->
         </div>
+        </div>
+    </div>
+</div>
         <div class="content container">
             <div class="row">
                 <div class="col-md-8">
+                {% endif %}
                 {% block content %}
                 {% endblock %}
                 </div>
             </div>
         </div>
+
     </body>
 </html>

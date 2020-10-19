@@ -1,19 +1,23 @@
 {% extends 'app/base.html' %}
 
 {% block content %}
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.brycen_file.label_tag }}
-        {{ form.brycen_file }}<br>
-        {{ form.billing_file.label_tag }}
-        {{ form.billing_file }}
 
+<h4>案件NO.{{ generated_data.pk }}</h4>
+<h5>取引先名：{{ generated_data.customer }}</h5>
 
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
+        <label>ブライセンから出力した契約データExcelファイルを選択してください。</label><br>
+        ブライセン契約データ{{ form.brycen_file }}
+    </div><br>
+    <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
+        <label>電子請求データCSVファイルを選択してください。</label><br>
+        請求データ{{ form.billing_file }}
+    </div><br>
 
-        <!--<input type="file" accept=".csv" ><br>-->
-
-        <!--<input type="file" accept=".xlsx" >-->
-        <div class="select-button" style="float: right;"><button type="submit" class="btn btn-outline-primary">upload</button></div>
-    </form>
+    <div class="select-button"><button type="submit" class="btn btn-outline-primary">upload</button></div>
+    ※uploadを押すと選択したファイルを基に<br>付け合わせ済ファイルを作成します。
+</form>
 
 {% endblock %}

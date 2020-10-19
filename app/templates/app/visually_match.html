@@ -1,0 +1,21 @@
+{% extends 'app/base.html' %}
+
+{% block content %}
+
+
+<h4>案件NO.{{ matched.generated.pk }}</h4><br>
+<h5>取引先名:{{　matched.generated.customer }}</h5><br>
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <h5>ブライセンとの目視確認を行いましたか？</h5>
+    {{ form.created_date }}に<button type="submit" class="btn btn-outline-primary">目視確認済</button><br>
+    {{ form.created_date.help_text }}
+</form><br>
+確認ファイル：<a href="{{ matched.matched_data_file.url }}">{{ matched_data_file_name }}</a>
+
+
+
+
+{% endblock %}
+

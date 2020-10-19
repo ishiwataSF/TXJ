@@ -1,0 +1,65 @@
+{% extends 'app/base.html' %}
+
+{% block content %}
+
+<h4>NO.{{import_data.visually_matched.matched.generated.pk}}:案件詳細</h4><br>
+<h5>取引先名:{{ import_data.visually_matched.matched.generated.customer }}</h5><br>
+
+<ul class="nav nav-tabs" id="myTab" role="tablist" style="width: 55rem;">
+  <li class="nav-item">
+    <a class="nav-link" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="false">アップロード情報</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="false">目視確認情報</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" id="contact-tab" data-toggle="tab" href="#contact" role="tab" aria-controls="contact" aria-selected="true">インポートデータ情報</a>
+  </li>
+</ul><br>
+<div class="tab-content" id="myTabContent">
+  <div class="tab-pane fade " id="home" role="tabpanel" aria-labelledby="home-tab">
+      <table border="1"  width="720" cellspacing="0" cellpadding="5">
+        <thead>
+          <tr><th>アップロード日</th><td>{{ import_data.visually_matched.matched.created_date }}</td></tr>
+          <tr><th>担当者</th><td>{{ import_data.visually_matched.matched.author }}</td></tr>
+          <tr><th>契約データ</th><td><a href="{{ matched_data.brycen_file.url }}" download="{{ name }}">{{ brycen_file_name }}</a></td></tr>
+          <tr><th>請求データ</th><td><a href="{{ matched_data.billing_file.url }}" download="{{ name }}">{{ billing_file_name }}</a></td></tr>
+        </thead>
+    </table>
+  </div>
+  <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+    <table border="1"  width="720" cellspacing="0" cellpadding="5">
+        <thead>
+          <tr><th>確認日</th><td>{{ import_data.visually_matched.created_date }}</td></tr>
+          <tr><th>担当者</th><td>{{ import_data.visually_matched.author }}</td></tr>
+          <tr><th>確認ファイル</th><td><a href="{{ matched_data.matched_data_file.url }}" download="{{ name }}">{{ matched_data_file_name }}</a></td></tr>
+        </thead>
+    </table>
+</div>
+  <div class="tab-pane fade show active" id="contact" role="tabpanel" aria-labelledby="contact-tab">
+    <table border="1"  width="720" cellspacing="0" cellpadding="5">
+        <thead>
+          <tr><th>出力日</th><td>{{ import_data.created_date }}</td></tr>
+          <tr><th>担当者</th><td>{{ import_data.author }}</td></tr>
+          {% if import_data.visually_matched_file %}
+          <tr><th>アップロードファイル有無</th><td>あり</td></tr>
+          <tr><th>アップロードファイル</th><td><a href="{{ import_data.visually_matched_file.url }}" download="{{ name }}">{{ visually_matched_file_name }}</a></td></tr>
+          {% else %}
+          <tr><th>アップロードファイル有無</th><td>なし</td></tr>
+          {% endif %}
+        </thead>
+    </table>
+  </div>
+</div><br>
+
+<a href="{{ import_data_file }}" download="{{ name }}" type="button" class="btn btn-primary">インポートデータダウンロード<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-download" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path fill-rule="evenodd" d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+  <path fill-rule="evenodd" d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+</svg></a><br><br>
+
+<a href="{% url 'top' %}" type="button" class="btn btn-outline-primary">TOP画面へ</a>
+
+
+
+
+{% endblock %}

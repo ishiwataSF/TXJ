@@ -10,3 +10,5 @@ manage.py
 .id_rsa_github.pub.swp
 git/
 media/
+txj_match_ver1.3.py
+txj_irregular_pt_import_data_ver1.1.py

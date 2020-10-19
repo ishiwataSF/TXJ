@@ -1,0 +1,87 @@
+{% extends 'app/base.html' %}
+
+{% block content %}
+
+<div class="page-body" style="margin: auto; padding: 20px 20px 20px 30px;">
+    <a href="{% url 'customer_select' %}" type="button" class="btn btn-outline-primary">新規案件を進める</a><br><br>
+
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">途中案件</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="content-tab" data-toggle="tab" href="#content" role="tab" aria-controls="content" aria-selected="false">終了案件</a>
+      </li>
+    </ul>
+    <div class="tab-content" id="myTabContent">
+      <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab" width="600rem">
+            <table border="1" cellspacing="0" cellpadding="5">
+                <thead>
+                    <tr>
+                        <th>NO.</th>
+                        <th>出力日</th>
+                        <th>担当者</th>
+                        <th>取引先</th>
+                        <th>請求データ/目視確認ファイル</th>
+                        <th>ファイル名</th>
+                        <th>ステータス</th>
+                    </tr>
+                </thead><br>
+                <tbody>
+                {% for m in matched %}
+                {% if m.generated.status is 1 %}
+                    <tr>
+                        <td>{{ m.generated.pk }}</td>
+                        <td><a href="{%url 'matched_data_detail' pk=m.pk %}">{{ m.created_date }}</a></td>
+                        <td>{{ m.author}}</td>
+                        <td>{{ m.generated.customer }}</td>
+                        <td>請求データ</td>
+                        <td><a href="{{ m.billing_file.url }}">{{ billing_file_name }}</a></td>
+                        <td>CSV出力済</td>
+                        {% endif %}{% endfor %}
+                    </tr>
+                {% for v in visually_matched %}
+                {% if v.matched.generated.status is 2 %}
+                    <tr>
+                        <td>{{ v.matched.generated.pk }}</td>
+                        <td><a href="{%url 'import_data' pk=v.pk %}">{{ v.created_date }}</a></td>
+                        <td>{{ v.author}}</td>
+                        <td>{{ v.matched.generated.customer }}</td>
+                        <td>目視確認ファイル</td>
+                        <td><a href="{{ v.matched.matched_data_file.url }}">{{ matched_data_file_name }}</a></td>
+                        <td>目視確認済</td>
+                        {% endif %}{% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+      </div>
+    <div class="tab-pane fade" id="content" role="tabpanel" aria-labelledby="content-tab">
+            <table border="1" cellspacing="0" cellpadding="5">
+                <thead>
+                    <tr>
+                        <th>NO.</th>
+                        <th>出力日</th>
+                        <th>担当者</th>
+                        <th>取引先</th>
+                    </tr>
+                </thead><br>
+                <tbody>
+                {% for i in import_data %}
+                {% if i.visually_matched.matched.generated.status is 3 %}
+                    <tr>
+                        <td>{{ i.visually_matched.matched.generated.pk }}</td>
+                        <td><a href="{% url 'import_data_detail' pk=i.pk %}">{{ i.created_date }}</a></td>
+                        <td>{{ i.author }}</td>
+                        <td>{{ i.visually_matched.matched.generated.customer }}</td>
+                        {% endif %}{% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+    </div>
+    </div>
+</div>
+
+
+
+
+{% endblock %}

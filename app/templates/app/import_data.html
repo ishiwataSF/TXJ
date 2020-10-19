@@ -1,0 +1,46 @@
+{% extends 'app/base.html' %}
+
+{% block content %}
+
+<h4>案件NO.{{　visually_matched.matched.generated.pk}}</h4><br>
+<h5>取引先名:{{ visually_matched.matched.generated.customer }}</h5><br>
+
+<form method="POST" enctype="multipart/form-data">
+    <div class="accordion" id="accordionExample">
+            <h6 class="mb-0">
+            <input class="btn btn-link" type="radio"  name="options2" data-toggle="collapse" data-target="#question" aria-expanded="true" aria-controls="collapseOne" checked="checked">
+              CSVデータに修正があります。
+            </input>
+            </h6>
+        <div class="card-body" style="width: 45rem;">
+                    <div id="question" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
+                        <div class="card" style="margin: auto; padding: 20px 20px 20px 30px;">
+                            {% csrf_token %}
+                              <label>修正したCSVファイルを選択してください。</label><br>
+                            {{ form.visually_matched_file }}<br>
+                            ※必ずファイルを選択してから、アップロードを押してください。<br>
+                            ※アップロードを押すと、選択したファイルを元にインポートデータを作成します。<br><br>
+                            <button type="submit" class="btn btn-outline-primary" style="width:100px;">upload</button>
+                        </div>
+                    </div>
+        </div>
+              <h6 class="mb-0">
+                <input class="btn btn-link" type="radio" name="options2" data-toggle="collapse" data-target="#question2" aria-expanded="false" aria-controls="collapseTwo">
+                  CSVデータに修正がありません。
+                </input>
+              </h6>
+        <div class="card-body" style="width: 47rem;">
+                <div id="question2" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+                    <div class="card" style="margin: auto; padding: 20px 20px 20px 10px;">
+                      <a href="{{ matched_data_file }}" download="{{ name }}">{{ matched_data_file_name }}</a><br>上記ファイルを参照してインポートデータを作成します。<br><br>
+                      <button type="submit" class="btn btn-outline-primary" style="width:200px;">インポートデータ作成</button>
+                    </div>
+                </div>
+        </div>
+    </div>
+</form>
+
+{{ matched }}
+
+
+{% endblock %}
