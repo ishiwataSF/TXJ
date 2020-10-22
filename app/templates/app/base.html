@@ -7,10 +7,41 @@
         <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
         <link rel="stylesheet" href="{% static 'css/app.css' %}">
+        <script>
+            $(function() {
+                $('.messages').addClass('wipe-in');
+                $(document).on('click', '.messages .close', function(e) {
+                    e.preventDefault();
+                    var $message = $(this).parents('li');
+                    $message.addClass('fade-out');
+                    setTimeout(function() { $message.remove(); }, 500);
+                });
+            });
+        </script>
     </head>
 
-    <body>
-<div class="page-header"><a href="{% url 'top' %}" style="color: #ffffff;">TOP</a></div><br>
+<body>
+  {% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+    <li class="alert" role="alert"><button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ message | linebreaksbr }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+{% if user.is_authenticated %}
+{% if not request.path == '/' %}
+<div class="page-header">
+    <a href="{% url 'top' %}" style="color: #ffffff;">TOP</a>
+    <div style="text-align: right;"><a href="{% url 'login' %}">Log out</a></div>
+</div>
+{% endif %}
+
+{% else %}
+<a href="{% url 'login' %}" class="top-menu">login<span class="glyphicon glyphicon-lock"></span></a>
+
+{% endif %}
+<br>
+{% if not request.path == '/top/' %}
 {% if not request.path == '/' %}
 <div class="side-bar" style="margin: auto; padding: 20px 20px 20px 30px;">
     <div class="status">
@@ -27,7 +58,6 @@
         {% endif %}
     </div>
     <div class="navi">
-        <!--<div class="accordion" id="accordion" role="tablist" aria-multiselectable="true">-->
         <div class="accordion" id="accordion">
         <div class="card" style="width: 23rem;">
           <h5 class="card-header">
@@ -113,9 +143,11 @@
         </div>
     </div>
 </div>
+
         <div class="content container">
             <div class="row">
-                <div class="col-md-8">
+                <div class="col-md-13">
+                {% endif %}
                 {% endif %}
                 {% block content %}
                 {% endblock %}

@@ -1,7 +1,7 @@
 from django import forms
 
 from .models import GeneratedData, MatchedData, VisuallyMatchedData, ImportData
-from django.core.files.storage import default_storage
+
 
 class CustomerSelectForm(forms.ModelForm):
 
@@ -31,5 +31,11 @@ class ImportDataCreateForm(forms.ModelForm):
     class Meta:
         model = ImportData
         fields = ('visually_matched_file', )
+
+
+
+
+
+
 
 

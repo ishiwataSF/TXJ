@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
-from django.urls import reverse
+import os
 
 
 class Staff(models.Model):
@@ -11,11 +11,13 @@ class Staff(models.Model):
     def __str__(self):
         return str(self.author)
 
+
 class Customer(models.Model):
     customer_name = models.CharField(max_length=200)
 
     def __str__(self):
         return self.customer_name
+
 
 class GeneratedData(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
@@ -32,6 +34,7 @@ class GeneratedData(models.Model):
     )
     status = models.IntegerField(choices=STATUS)
 
+
 class MatchedData(models.Model):
     generated = models.OneToOneField(GeneratedData, on_delete=models.CASCADE)
     author = models.ForeignKey(Staff, on_delete=models.CASCADE)
@@ -39,6 +42,15 @@ class MatchedData(models.Model):
     brycen_file = models.FileField(upload_to='brycen_file/%Y/%m%d/', validators=[FileExtensionValidator(['xlsx', ])]) # ブライセンの契約データExcelを保存したい
     billing_file = models.FileField(upload_to='billing_file/%Y/%m%d/', validators=[FileExtensionValidator(['csv', ])]) # 電子データCSVを保存したい
     matched_data_file = models.FileField(upload_to='matched_data_file/%Y/%m%d/', null=True, blank=True) # 突合済CSVを保存したい
+
+    @property
+    def billing_filename(self):
+        return os.path.basename(self.billing_file.name)
+
+    @property
+    def matched_data_filename(self):
+        return os.path.basename(self.matched_data_file.name)
+
 
 class VisuallyMatchedData(models.Model):
     matched = models.OneToOneField(MatchedData, on_delete=models.CASCADE)
@@ -52,5 +64,3 @@ class ImportData(models.Model):
     created_date = models.DateTimeField(default=timezone.now)
     visually_matched_file = models.FileField(upload_to='visually_matched_file/%Y/%m%d/', null=True,blank=True) # 突合済CSV修正ありなら、修正版CSVを保存したい。無い場合もあり。
     import_data_file = models.FileField(upload_to='import_data_file/%Y/%m%d/', null=True, blank=True) # インポートデータExcelを保存したい
-
-

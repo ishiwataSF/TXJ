@@ -1,22 +1,31 @@
-from django.contrib.auth.decorators import login_required
-from django.db import transaction
-from django.http import HttpResponse
-from django.shortcuts import render
-
-from django.urls import reverse
+from django.contrib.auth.views import LoginView
+from django.contrib.messages.views import SuccessMessageMixin
 from django.conf import settings
+from django.db import transaction
+from django.shortcuts import redirect
 from django.utils import timezone
-from django.views.generic import ListView, DetailView, TemplateView, UpdateView, CreateView
+from django.urls import reverse
+from django.views.generic import ListView, DetailView, CreateView
 from .models import Staff, Customer, GeneratedData, MatchedData, VisuallyMatchedData, ImportData
 from .forms import CustomerSelectForm, UploadFileSelectForm, VisuallyMatchedDataCreateForm, ImportDataCreateForm
-
 from datetime import datetime
-import openpyxl, urllib.parse, os, csv, re
+import openpyxl,  os, csv, urllib.parse, re
 
 UPLOAD_NOT_COMPLETED = 0
 CSV_OUTPUT_COMPLETED = 1
 VISUALLY_CONFIRMED = 2
 IMPORT_DATA_OUTPUT_COMPLETED = 3
+
+
+class LoginFormView(SuccessMessageMixin, LoginView):
+    template_name = 'registration/login.html'
+
+    def get_success_url(self):
+        return reverse('top')
+
+    def get_success_message(self, cleaned_data):
+        return f'{self.request.user}でログインしました'
+
 
 class HistoryListView(ListView):
     template_name = 'app/top.html'
@@ -29,18 +38,6 @@ class HistoryListView(ListView):
         visually_matched = VisuallyMatchedData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
         import_data = ImportData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
         context = super().get_context_data(**kwargs)
-        for m in matched:
-            billing_file_path = urllib.parse.unquote(m.billing_file.url)
-            billing_file_path_split = os.path.split(billing_file_path)
-            billing_file_name = billing_file_path_split[1]
-            matched_data_file_path = urllib.parse.unquote(m.matched_data_file.url)
-            matched_data_file_path_split = os.path.split(matched_data_file_path)
-            matched_data_file_name = matched_data_file_path_split[1]
-
-            context['billing_file_name'] = billing_file_name
-            context['matched_data_file_name'] = matched_data_file_name
-
-
         context['matched'] = matched
         context['visually_matched'] = visually_matched
         context['import_data'] = import_data
@@ -62,8 +59,6 @@ class GeneratedDataCreateView(CreateView):
         generated_data.save()
 
         return super().form_valid(form)
-
-
 
     def get_success_url(self):
         return reverse('upload', kwargs={'pk': self.object.pk})
@@ -102,13 +97,6 @@ class MatchedDataCreateView(CreateView):
         file_path = create_csv(brycen_file_path, billing_file_path)
         # print('file_path:{}'.format(file_path))
 
-        # create_csvファイルをMatchedDataのmatched_data_fileフィールドに紐付け
-        # now = datetime.now()
-        # today = now.strftime('%Y/%m%d/')
-        # dir_name = 'matched_data_file'
-        # file_name = 'TXJ_付け合わせ済'+ now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分' + '.csv'
-        # matched_data.matched_data_file = os.path.join(dir_name, today, file_name)
-
         # csv_createのfile_pathを取得し、file_pathからMatchedDataのmatched_data_fileフィールドに紐付け
         path_split = os.path.split(file_path)
         dir_name = path_split[0]
@@ -118,15 +106,12 @@ class MatchedDataCreateView(CreateView):
         matched_data_file_dir = '/'.join(dir_name_list)
         matched_data_file_path = os.path.join(matched_data_file_dir, file_name)
         matched_data.matched_data_file = matched_data_file_path
-        print('matched_data_file_path:{}'.format(matched_data.matched_data_file))
-
+        # print('matched_data_file_path:{}'.format(matched_data.matched_data_file))
 
         return super().form_valid(form)
 
-
     def get_success_url(self):
         return reverse('matched_data_detail', kwargs={'pk': self.object.pk})
-
 
 
 # 突合スクリプト
@@ -366,10 +351,10 @@ def create_csv(f, f2):
 
             # brycen_dataとbilling_listのstore_code、pt_code、totalが
             # 完全一致した行をbilling_dataからremove
-            elif [billing_list[STORE_CODE_LIST_INDEX], billing_list[PT_CODE_LIST_INDEX],
-                  billing_list[TOTAL_LIST_INDEX]] == [b[BRYCEN_STORE_CODE_LIST_INDEX], b[BRYCEN_PT_CODE_LIST_INDEX],
-                                                      b[BRYCEN_TOTAL_LIST_INDEX]]:
-                billing_data.remove(billing_list)
+            # elif [billing_list[STORE_CODE_LIST_INDEX], billing_list[PT_CODE_LIST_INDEX],
+                  # billing_list[TOTAL_LIST_INDEX]] == [b[BRYCEN_STORE_CODE_LIST_INDEX], b[BRYCEN_PT_CODE_LIST_INDEX],
+                                                      # b[BRYCEN_TOTAL_LIST_INDEX]]:
+                # billing_data.remove(billing_list)
 
         # brycen_dataとbilling_dataが不一致だった場合のみ
         # writer_dataにappend
@@ -416,7 +401,6 @@ def create_csv(f, f2):
     return file_path
 
 
-
 class MatchedDataDetailView(DetailView):
     model = MatchedData
     template_name = 'app/matched_data_detail.html'
@@ -447,7 +431,6 @@ class VisuallyMatchedDataCreateView(CreateView):
     model = VisuallyMatchedData
     form_class = VisuallyMatchedDataCreateForm
     template_name = 'app/visually_match.html'
-
 
     def get_context_data(self, **kwargs):
         matched_data_pk = self.kwargs['pk']
@@ -505,35 +488,44 @@ class ImportDataCreateView(CreateView):
         return context
 
     def form_valid(self, form):
-        import_data = form.save(commit=False)
-        author = Staff.objects.get(author=self.request.user)
-        import_data.author = author
-        visually_matched_data_pk = self.kwargs['pk']
-        visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
-        # print('visually_matched_data_pk:{}'.format(self.kwargs['pk']))
-        import_data.visually_matched_id = visually_matched.id
-        import_data.save()
+        if 'upload' in self.request.POST:
+            import_data = form.save(commit=False)
+            author = Staff.objects.get(author=self.request.user)
+            import_data.author = author
+            visually_matched_data_pk = self.kwargs['pk']
+            visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
+            import_data.visually_matched_id = visually_matched.id
+            #print('visually_matched_file_path:{}'.format(import_data.visually_matched_file.path))
+            #file_path = import_data_create(import_data.visually_matched_data_file.path)
+            import_data.save()
+
+            if not import_data.visually_matched_file:
+                # print('visually_matched_file is None...')
+                import_data.delete()
+                return redirect('import_data', pk=visually_matched_data_pk)
+
+            elif import_data.visually_matched_file:
+                visually_matched_file_path = urllib.parse.unquote(import_data.visually_matched_file.path)
+                file_path = import_data_create(visually_matched_file_path)
+
+        if 'create' in self.request.POST:
+            import_data = form.save(commit=False)
+            author = Staff.objects.get(author=self.request.user)
+            import_data.author = author
+            visually_matched_data_pk = self.kwargs['pk']
+            visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
+            import_data.visually_matched_id = visually_matched.id
+            matched_file_path = urllib.parse.unquote(visually_matched.matched.matched_data_file.path)
+            file_path = import_data_create(matched_file_path)
+            import_data.save()
+
+
 
         generated_data_pk = import_data.visually_matched.matched.generated.pk
         # print('generated_data_pk:{}'.format(generated_data_pk))
         generated = GeneratedData.objects.get(pk=generated_data_pk)
         generated.status = GeneratedData.IMPORT_DATA_OUTPUT_COMPLETED
         generated.save()
-
-
-        if not import_data.visually_matched_file:
-            file_path = import_data_create(visually_matched.matched.matched_data_file.path)
-
-        if import_data.visually_matched_file:
-            visually_matched_file_path = urllib.parse.unquote(import_data.visually_matched_file.path)
-            file_path = import_data_create(visually_matched_file_path)
-
-        # import_data_createExcelファイルをImportDataのimport_data_fileフィールドに紐付け
-        # now = datetime.now()
-        # today = now.strftime('%Y/%m%d/')
-        # dir_name = 'import_data_file'
-        # file_name = 'TXJ_import_data'+ now.strftime('%Y年%m月%d日%H時%M分') + '_作成分' + '.xlsx'
-        # import_data.import_data_file = os.path.join(dir_name, today, file_name)
 
         # create_import_dataのfile_pathを取得し、file_pathからImportDataのimport_data_fileフィールドに紐付け
         path_split = os.path.split(file_path)
@@ -545,7 +537,7 @@ class ImportDataCreateView(CreateView):
         import_data_file_dir = '/'.join(dir_name_list)
         import_data_file_path = os.path.join(import_data_file_dir, file_name)
         import_data.import_data_file = import_data_file_path
-        print('import_data_file:{}'.format(import_data.import_data_file))
+        # print('import_data_file:{}'.format(import_data.import_data_file))
 
         return super().form_valid(form)
 
@@ -640,8 +632,13 @@ def import_data_create(f):
 
         # day = dt.strptime(row[DAY_COL_NUM], '%Y-%m-%d %H:%M:%S')  # %Y-%m-%d %H:%M:%S
         pt_code = str(row[PT_CODE_COL_NUM].rjust(5, '0'))
-        amount = float(row[AMOUNT_COL_NUM])
+
+        amount = row[AMOUNT_COL_NUM]
+        if amount:
+            amount = float(amount)
+
         unit = row[UNIT_COL_NUM]
+
         total = int(row[TOTAL_COL_NUM])
 
         product_code = row[PRODUCT_COL_NUM]
@@ -690,6 +687,9 @@ def import_data_create(f):
             product_name = 'コンテナレンタル費用'
             item_code = '2'
 
+        # product_codeが5103の場合のみitem（品目列）が、
+        # コンテナ交換or産業廃棄物かで、item_codeが異なる
+        # ただし、上記item以外の場合は全て産業廃棄物のitem_codeになる
         elif product_code == 5103:
             product_code = '5103'
             product_name = '産業廃棄物収集運搬処分費'
@@ -701,7 +701,7 @@ def import_data_create(f):
                 item_code = '10'
 
             else:
-                item_code = ''
+                item_code = '10'
 
         elif product_code == 5105:
             product_code = '5105'
@@ -936,6 +936,7 @@ def import_data_create(f):
             else:
                 l[UNIT_PRICE_LIST_INDEX] = int(unit_price)
                 l[AMOUNT_LIST_INDEX] = int(amount)
+                l[UNIT_CODE_LIST_INDEX] = 2
 
         #  単位がt(半角）だった場合
         elif unit == 't':
@@ -945,18 +946,25 @@ def import_data_create(f):
         elif unit == 'ｔ':
             kg_conversion()
 
-        #  単価が空欄だった場合
+        #  単価が空で尚且つ、数量も空だった場合
         elif unit_price == '':
-            if int(amount) == 1:
+            if not amount:
+                l[UNIT_PRICE_LIST_INDEX] = total
+                l[AMOUNT_LIST_INDEX] = 1
+                l[UNIT_CODE_LIST_INDEX] = 2
+
+            elif int(amount) == 1:
                 l[UNIT_PRICE_LIST_INDEX] = total
                 l[AMOUNT_LIST_INDEX] = 1
                 l[REMARK_LIST_INDEX] = str(amount) + str(unit)
                 # l[UNIT_CODE_LIST_INDEX] = '単位を確認してください'
                 l[UNIT_CODE_LIST_INDEX] = '2'
 
-        else:
-            l[UNIT_PRICE_LIST_INDEX] = int(unit_price)
-            l[AMOUNT_LIST_INDEX] = int(amount)
+            else:
+                l[UNIT_PRICE_LIST_INDEX] = total
+                l[AMOUNT_LIST_INDEX] = 1
+                l[REMARK_LIST_INDEX] = str(amount) + str(unit)
+
 
         ws.cell(column=1, row=i).value = l[STORE_CODE_LIST_INDEX]
         ws.cell(column=55, row=i).value = l[DAY_LIST_INDEX]
@@ -1055,60 +1063,6 @@ class ImportDataDetailView(DetailView):
         context['billing_file_name'] = billing_file_name
         context['status'] = IMPORT_DATA_OUTPUT_COMPLETED
         return context
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
 
 
 

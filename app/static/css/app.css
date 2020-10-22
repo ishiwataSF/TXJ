@@ -28,3 +28,28 @@ width: 100px;
 }
 
 
+.messages {
+    position: fixed;
+    width: 95%;
+    margin-left: 2.5%;
+    padding: 0;
+    transition: top ease-in-out .5s;
+    z-index: 1060;
+    top: -64px;
+}
+.messages.wipe-in {
+    top: 8px !important;
+}
+li {
+    list-style: none;
+}
+.messages li {
+    margin-bottom: 0.5rem;
+    transition: opacity ease-in-out .25s;
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+.messages li.fade-out {
+    opacity: 0;
+}
