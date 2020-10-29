@@ -16,15 +16,18 @@
     </ul>
     <div class="tab-content" id="myTabContent">
       <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab" width="600rem">
-            <table class="table table-sm table-hover" id="incompleteTable" cellspacing="0" cellpadding="5">
+            <table class="table table-sm table-hover" id="incompleteTable"
+                   cellspacing="0" cellpadding="5" data-url="json/data1.json"
+                   data-filter-control="true" data-show-search-clear-button="true">
+
                 <thead class="thead-light">
                     <tr>
                         <th>NO.</th>
                         <th>最終更新日</th>
-                        <th cmanFilterBtn>ステータス</th>
-                        <th cmanFilterBtn>取引先</th>
-                        <th cmanFilterBtn>担当者</th>
-                        <th cmanFilterBtn>請求データ/目視確認ファイル</th>
+                        <th data-field="status" data-filter-control="select">ステータス</th>
+                        <th>取引先</th>
+                        <th>担当者</th>
+                        <th>請求データ/目視確認ファイル</th>
                         <th>ファイル名</th>
                     </tr>
                 </thead><br>
@@ -62,9 +65,10 @@
                     <tr>
                         <th>NO.</th>
                         <th>インポートデータ出力日</th>
-                        <th cmanFilterBtn>担当者</th>
-                        <th cmanFilterBtn>取引先</th>
+                        <th>担当者</th>
+                        <th>取引先</th>
                         <th>請求データ</th>
+                        <th>CSV修正有無</th>
                     </tr>
                 </thead><br>
                 <tbody>
@@ -76,6 +80,10 @@
                         <td>{{ i.author }}</td>
                         <td>{{ i.visually_matched.matched.generated.customer }}</td>
                         <td><a href="{{ i.visually_matched.matched.billing_file.url }}">{{ i.visually_matched.matched.billing_filename }}</a></td>
+                        {% if i.visually_matched_file %}
+                        <td>あり</td>
+                        {% else %}
+                        <td>なし</td>{% endif %}
                         {% endif %}{% endfor %}
                     </tr>
                 </tbody>
@@ -84,13 +92,21 @@
     </div>
 </div>
 
-
 <!--  -->
 <!-- フィルタ対象のテーブル -->
 <!-- <th>,<td>に「cmanFilterBtn」を定義するとフィルタボタンが付きます -->
 <!--  -->
 
+<!--<script>
+$(document).ready(function(){
+  $(function() {
+    $('#incompleteTable').bootstrapTable()
+  });
+});
 
+</script>-->
+
+{% comment %}
 <style type="text/css">
 /* === フィルタボタン ============================ */
 .tfArea{
@@ -200,7 +216,6 @@
 <!--  white-space   : nowrap;-->
 }
 </style>
-
 <script type="text/javascript">
  //===============================================================
  //  フィルタテーブルの共通変数　設定要！
@@ -215,6 +230,7 @@ var gTfListSave = {};             // フィルタリストの保存状態
  //===============================================================
 window.onload = function() {
   tFilterInit();
+
 }
 
 function tFilterInit(){
@@ -408,6 +424,7 @@ function tFilterGo(){
   for(var i = 0; i < wTR.length; i++){
     if(wTR[i].getAttribute('cmanFilterNone') !== null){
       wTR[i].removeAttribute('cmanFilterNone');
+
     }
   }
 
@@ -577,6 +594,7 @@ function trim(argStr){
 
 
 </script>
+{% endcomment %}
 
 
 

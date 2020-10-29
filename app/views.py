@@ -34,13 +34,18 @@ class HistoryListView(ListView):
         return GeneratedData.objects.order_by('-status')
 
     def get_context_data(self, **kwargs):
+        customer = Customer.objects.all()
+        staff = Staff.objects.all()
         matched = MatchedData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
         visually_matched = VisuallyMatchedData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
         import_data = ImportData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
         context = super().get_context_data(**kwargs)
+        context['customer'] = customer
+        context['staff'] = staff
         context['matched'] = matched
         context['visually_matched'] = visually_matched
         context['import_data'] = import_data
+
 
         return context
 
@@ -487,28 +492,30 @@ class ImportDataCreateView(CreateView):
         context['status'] = VISUALLY_CONFIRMED
         return context
 
+    def get_form_kwargs(self, *args, **kwargs):
+        form_kwargs = super().get_form_kwargs(*args, **kwargs)
+        if self.request.method == 'POST':
+            if 'upload_and_create' in self.request.POST:
+                form_kwargs.update({'upload_and_create': self.request.POST.get('upload_and_create', None) is not None})
+            elif 'create' in self.request.POST:
+                form_kwargs.update({'create': self.request.POST.get('create', None) is not None})
+        return form_kwargs
+
     def form_valid(self, form):
-        if 'upload' in self.request.POST:
+        if 'upload_and_create' in self.request.POST:
             import_data = form.save(commit=False)
             author = Staff.objects.get(author=self.request.user)
             import_data.author = author
             visually_matched_data_pk = self.kwargs['pk']
             visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
             import_data.visually_matched_id = visually_matched.id
-            #print('visually_matched_file_path:{}'.format(import_data.visually_matched_file.path))
-            #file_path = import_data_create(import_data.visually_matched_data_file.path)
             import_data.save()
 
-            if not import_data.visually_matched_file:
-                # print('visually_matched_file is None...')
-                import_data.delete()
-                return redirect('import_data', pk=visually_matched_data_pk)
-
-            elif import_data.visually_matched_file:
+            if import_data.visually_matched_file:
                 visually_matched_file_path = urllib.parse.unquote(import_data.visually_matched_file.path)
                 file_path = import_data_create(visually_matched_file_path)
 
-        if 'create' in self.request.POST:
+        elif 'create' in self.request.POST:
             import_data = form.save(commit=False)
             author = Staff.objects.get(author=self.request.user)
             import_data.author = author
@@ -593,13 +600,13 @@ def import_data_create(f):
     data = list(reader)  # 開いた内容をリストで取得して、dataに入れる
     # last_row = sum(1 for i in open(f))  # CSVファイルの最終行を取得
 
-    #  内藤クリエーション（10101）の単価15だった場合の行数を取得
+    #  pt_codeが10101の単価15だった場合の行数を取得
     n_row_count = 1
     for n in data:
         if n[PT_CODE_COL_NUM] == '10101' and n[UNIT_PRICE_COL_NUM] == '15':
             n_row_count += 1
 
-    # write_max_row = last_row - n_row_count  # csv最終行数 - 内藤クリエーションの単価15だった場合の行数　= Excelに書き出される行数値 ex. 130 - 5 = 125
+    # write_max_row = last_row - n_row_count  # csv最終行数 - pt_code 10101の単価15だった場合の行数　= Excelに書き出される行数値 ex. 130 - 5 = 125
 
     wb = openpyxl.load_workbook('/Users/ishiwata/PycharmProjects/Tool/media/import_data_format_file/import_data_format.xlsx')
     ws = wb.active
@@ -650,7 +657,7 @@ def import_data_create(f):
         product_name = None
         item_code = None
 
-        # PT：10101（内藤クリエーション）の単価15.0の行はlに入れない
+        # PT：10101の単価15.0の行はlに入れない
         if pt_code == '10101':
             if day == day:
                 if int(float(row[UNIT_PRICE_COL_NUM])) == 15:

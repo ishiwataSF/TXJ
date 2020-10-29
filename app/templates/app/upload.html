@@ -9,15 +9,17 @@
     {% csrf_token %}
     <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
         <label>ブライセンから出力した契約データExcelファイルを選択してください。</label><br>
-        ブライセン契約データ{{ form.brycen_file }}
+        ブライセン契約データ
+        <input type="file" accept=".xlsx" name="brycen_file" id="id_brycen_file">
     </div><br>
     <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
         <label>電子請求データCSVファイルを選択してください。</label><br>
-        請求データ{{ form.billing_file }}
+        請求データ
+        <input type="file" accept=".csv" name="billing_file" id="id_billing_file">
     </div><br>
 
-    <div class="select-button"><button type="submit" class="btn btn-outline-primary">upload</button></div>
-    ※uploadを押すと選択したファイルを基に<br>付け合わせ済ファイルを作成します。
+    <div class="select-button"><button type="submit" name="csv_upload" class="btn btn-outline-primary">upload</button></div>
+    ※uploadを押すと選択したファイルを基に付け合わせ済ファイルを作成します。
 </form>
 
 {% endblock %}

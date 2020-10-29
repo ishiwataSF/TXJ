@@ -63,4 +63,4 @@ class ImportData(models.Model):
     author = models.ForeignKey(Staff, on_delete=models.CASCADE)
     created_date = models.DateTimeField(default=timezone.now)
     visually_matched_file = models.FileField(upload_to='visually_matched_file/%Y/%m%d/', null=True,blank=True) # 突合済CSV修正ありなら、修正版CSVを保存したい。無い場合もあり。
-    import_data_file = models.FileField(upload_to='import_data_file/%Y/%m%d/', null=True, blank=True) # インポートデータExcelを保存したい
+    import_data_file = models.FileField(upload_to='import_data_file/%Y/%m%d/') # インポートデータExcelを保存したい
