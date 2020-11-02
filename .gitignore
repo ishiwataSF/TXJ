@@ -6,7 +6,6 @@ myvenv
 db.mysql
 /static
 .DS_Store
-manage.py
 .id_rsa_github.pub.swp
 git/
 media/
