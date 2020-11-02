@@ -83,7 +83,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'Tool',
         'USER': 'root',
-        'HOST': '127.0.0.1',
+        'HOST': 'TXJ-Project.mysql.pythonanywhere-services.com',
         'PORT': '3306',
 
     }
