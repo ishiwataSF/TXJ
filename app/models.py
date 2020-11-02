@@ -41,7 +41,8 @@ class MatchedData(models.Model):
     created_date = models.DateTimeField(default=timezone.now)
     brycen_file = models.FileField(upload_to='brycen_file/%Y/%m%d/', validators=[FileExtensionValidator(['xlsx', ])]) # ブライセンの契約データExcelを保存したい
     billing_file = models.FileField(upload_to='billing_file/%Y/%m%d/', validators=[FileExtensionValidator(['csv', ])]) # 電子データCSVを保存したい
-    matched_data_file = models.FileField(upload_to='matched_data_file/%Y/%m%d/', null=True, blank=True) # 突合済CSVを保存したい
+    matched_data_file = models.FileField(upload_to='matched_data_file/%Y/%m%d/',
+                                         validators=[FileExtensionValidator(['csv', ])], null=True,blank=True) # 突合済CSVを保存したい
 
     @property
     def billing_filename(self):
@@ -62,5 +63,7 @@ class ImportData(models.Model):
     visually_matched = models.OneToOneField(VisuallyMatchedData, on_delete=models.CASCADE)
     author = models.ForeignKey(Staff, on_delete=models.CASCADE)
     created_date = models.DateTimeField(default=timezone.now)
-    visually_matched_file = models.FileField(upload_to='visually_matched_file/%Y/%m%d/', null=True,blank=True) # 突合済CSV修正ありなら、修正版CSVを保存したい。無い場合もあり。
-    import_data_file = models.FileField(upload_to='import_data_file/%Y/%m%d/') # インポートデータExcelを保存したい
+    visually_matched_file = models.FileField(upload_to='visually_matched_file/%Y/%m%d/',
+                                             validators=[FileExtensionValidator(['csv', ])], null=True,blank=True) # 突合済CSV修正ありなら、修正版CSVを保存したい。無い場合もあり。
+    import_data_file = models.FileField(upload_to='import_data_file/%Y/%m%d/', validators=[FileExtensionValidator(['xlsx', ])],
+                                        null=True,blank=True) # インポートデータExcelを保存したい

@@ -4,7 +4,6 @@
 __pycache__
 myvenv
 db.mysql
-*.py[co]
 /static
 .DS_Store
 manage.py
