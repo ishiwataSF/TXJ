@@ -28,7 +28,7 @@ SECRET_KEY = 'i+m%7esu*9%2i2k*#(7shrv&tdkz)o#d6bf4&a+0^&n$bg4f0='
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', '.pythonanywhere.com']
 
 
 # Application definition
@@ -83,7 +83,6 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'Tool',
         'USER': 'root',
-        'HOST': 'localhost',
 
     }
 }
