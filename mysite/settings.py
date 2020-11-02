@@ -81,10 +81,9 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'Tool',
-        'USER': 'root',
-        "PASSWORD": "root",
-        'HOST':'txjprojects.mysql.pythonanywhere-services.com',
+        'NAME': 'TXJProjects$default',
+        'USER': 'TXJProjects',
+        'HOST':'TXJProjects.mysql.pythonanywhere-services.com',
 
     }
 }
