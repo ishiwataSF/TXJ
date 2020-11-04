@@ -35,7 +35,7 @@
   </ul>
   {% endif %}
 {% if user.is_authenticated %}
-{% if not request.path == '/' %}
+{% if not page == 'LOGIN' %}
 <div class="page-header">
     <a href="{% url 'top' %}" style="color: #ffffff;">TOP</a>
     <div style="text-align: right;"><a href="{% url 'login' %}">Log out</a></div>
@@ -44,14 +44,14 @@
 
 {% else %}
 <a href="{% url 'login' %}" class="top-menu">login<span class="glyphicon glyphicon-lock"></span></a>
-
 {% endif %}
+
 <br>
-{% if not request.path == '/top/' %}
-{% if not request.path == '/' %}
+{% if not page == 'LOGIN' %}
+{% if not page == 'TOP' %}
 <div class="side-bar" style="margin: auto; padding: 20px 20px 20px 30px;">
     <div class="status">
-        {% if request.path == '/customer_select/' %}
+        {% if status == 'CUSTOMER_SELECT' %}
         <p><button type="button" class="btn btn-info">ステータス：取引先選択</button></p>
         {% elif status is 0 %}
         <p><button type="button" class="btn btn-info">ステータス：未アップロード</button></p>

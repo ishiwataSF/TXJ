@@ -2,7 +2,6 @@ from django.contrib.auth.views import LoginView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.conf import settings
 from django.db import transaction
-from django.shortcuts import redirect
 from django.utils import timezone
 from django.urls import reverse
 from django.views.generic import ListView, DetailView, CreateView
@@ -26,6 +25,11 @@ class LoginFormView(SuccessMessageMixin, LoginView):
     def get_success_message(self, cleaned_data):
         return f'{self.request.user}でログインしました'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data()
+        context['page'] = 'LOGIN'
+        return context
+
 
 class HistoryListView(ListView):
     template_name = 'app/top.html'
@@ -45,6 +49,7 @@ class HistoryListView(ListView):
         context['matched'] = matched
         context['visually_matched'] = visually_matched
         context['import_data'] = import_data
+        context['page'] = 'TOP'
 
 
         return context
@@ -67,6 +72,12 @@ class GeneratedDataCreateView(CreateView):
 
     def get_success_url(self):
         return reverse('upload', kwargs={'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data()
+        context['status'] = 'CUSTOMER_SELECT'
+
+        return context
 
 
 class MatchedDataCreateView(CreateView):
@@ -386,6 +397,7 @@ def create_csv(f, f2):
     # print('filename1: {}'.format(file_name), )
 
     file_path = os.path.join(dir_name, file_name)
+    print('file_path:{}'.format(file_path))
     # print('file_path: {} '.format(file_path))
 
 
