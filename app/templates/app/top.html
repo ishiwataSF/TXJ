@@ -17,14 +17,14 @@
     <div class="tab-content" id="myTabContent">
       <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab" width="600rem">
             <table class="table table-sm table-hover" id="incompleteTable"
-                   cellspacing="0" cellpadding="5" data-url="json/data1.json"
+                   cellspacing="0" cellpadding="5"
                    data-filter-control="true" data-show-search-clear-button="true">
 
                 <thead class="thead-light">
                     <tr>
                         <th>NO.</th>
                         <th>最終更新日</th>
-                        <th data-field="status" data-filter-control="select">ステータス</th>
+                        <th>ステータス</th>
                         <th>取引先</th>
                         <th>担当者</th>
                         <th>請求データ/目視確認ファイル</th>
@@ -60,13 +60,14 @@
             </table>
       </div>
     <div class="tab-pane fade" id="content" role="tabpanel" aria-labelledby="content-tab">
-            <table class="table table-sm table-hover" id="completedTable" cellspacing="0" cellpadding="5">
+            <table class="table table-sm table-hover" id="completedTable" data-filter-control="true"
+                    data-show-search-clear-button="true"cellspacing="0" cellpadding="5">
                 <thead class="thead-light">
                     <tr>
                         <th>NO.</th>
                         <th>インポートデータ出力日</th>
-                        <th>担当者</th>
-                        <th>取引先</th>
+                        <th data-field="author" data-filter-control="select">担当者</th>
+                        <th data-field="customer" data-filter-control="select">取引先</th>
                         <th>請求データ</th>
                         <th>CSV修正有無</th>
                     </tr>
@@ -97,15 +98,11 @@
 <!-- <th>,<td>に「cmanFilterBtn」を定義するとフィルタボタンが付きます -->
 <!--  -->
 
-<!--<script>
-$(document).ready(function(){
+<script>
   $(function() {
-    $('#incompleteTable').bootstrapTable()
-  });
-});
-
-</script>-->
-
+    $('#completedTable').bootstrapTable()
+  })
+</script>
 {% comment %}
 <style type="text/css">
 /* === フィルタボタン ============================ */

@@ -118,7 +118,8 @@ class MatchedDataCreateView(CreateView):
         dir_name = path_split[0]
         file_name = path_split[1]
         dir_name_split = dir_name.split('/')
-        dir_name_list = dir_name_split[6:]
+        #dir_name_list = dir_name_split[6:]
+        dir_name_list = dir_name_split[5:]
         matched_data_file_dir = '/'.join(dir_name_list)
         matched_data_file_path = os.path.join(matched_data_file_dir, file_name)
         matched_data.matched_data_file = matched_data_file_path
@@ -388,7 +389,7 @@ def create_csv(f, f2):
     print('dir_name:{}'.format(dir_name))
 
     if not os.path.exists(dir_name):
-        os.mkdir(dir_name)
+        os.makedirs(dir_name, exist_ok=True)
 
     # ファイル命名
     # file_name = 'TXJ_付け合わせ済' + '(' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
@@ -552,7 +553,8 @@ class ImportDataCreateView(CreateView):
         file_name = path_split[1]
         dir_name_split = dir_name.split('/')
         # /Users/name/PycharmProjects/Tool/media/matched_data_file/2020/1008/の/media/以降がdir_name_list
-        dir_name_list = dir_name_split[6:]
+        #dir_name_list = dir_name_split[6:]
+        dir_name_list = dir_name_split[5:]
         import_data_file_dir = '/'.join(dir_name_list)
         import_data_file_path = os.path.join(import_data_file_dir, file_name)
         import_data.import_data_file = import_data_file_path
@@ -1031,7 +1033,7 @@ def import_data_create(f):
     # print('dir_name:{}'.format(dir_name))
 
     if not os.path.exists(dir_name):
-        os.mkdir(dir_name)
+        os.makedirs(dir_name, exist_ok=True)
 
     # ファイル命名
     file_name = 'TXJ_import_data'+ now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分' + '.xlsx'

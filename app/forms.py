@@ -15,6 +15,8 @@ class UploadFileSelectForm(forms.ModelForm):
     class Meta:
         model = MatchedData
         fields = ('brycen_file', 'billing_file', )
+        widgets = {'brycen_file': forms.FileInput(attrs={'accept': '.xlsx'}),
+                   'billing_file': forms.FileInput(attrs={'accept': '.csv'})}
 
 class VisuallyMatchedDataCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -53,6 +55,7 @@ class ImportDataCreateForm(forms.ModelForm):
     class Meta:
         model = ImportData
         fields = ('visually_matched_file', )
+        widgets = {'visually_matched_file': forms.FileInput(attrs={'accept': '.csv'})}
 
 
 

@@ -17,8 +17,8 @@
                         <div class="p-3 card" style="width: 40rem;">
                             {% csrf_token %}
                             <label>修正したCSVファイルを選択してください。</label>
-                            <input type="file" accept=".csv" name="visually_matched_file" id="visually_matched_file">
-                            <!--{{ form.visually_matched_file }}-->
+                            <!--<input type="file" accept=".csv" name="visually_matched_file" id="visually_matched_file">-->
+                            {{ form.visually_matched_file }}
                             {{ form.visually_matched_file.errors }}
                             ※ファイルを選択し、アップロードを押してください。<br><br>
                             <button type="submit" name="upload_and_create" class="btn btn-outline-primary" style="width:100px;">upload</button>
