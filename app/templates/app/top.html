@@ -61,15 +61,15 @@
       </div>
     <div class="tab-pane fade" id="content" role="tabpanel" aria-labelledby="content-tab">
             <table class="table table-sm table-hover" id="completedTable" data-filter-control="true"
-                    data-show-search-clear-button="true"cellspacing="0" cellpadding="5">
-                <thead class="thead-light">
+                    cellspacing="0" cellpadding="5">
+                <thead class="thead">
                     <tr>
                         <th>NO.</th>
-                        <th>インポートデータ出力日</th>
+                        <th data-field="export-date" data-filter-control="input">インポートデータ出力日</th>
                         <th data-field="author" data-filter-control="select">担当者</th>
                         <th data-field="customer" data-filter-control="select">取引先</th>
-                        <th>請求データ</th>
-                        <th>CSV修正有無</th>
+                        <th data-field="billing-data" data-filter-control="input">請求データ</th>
+                        <th data-field="csv-type" data-filter-control="select">CSV修正有無</th>
                     </tr>
                 </thead><br>
                 <tbody>

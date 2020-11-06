@@ -1,6 +1,7 @@
 from django.contrib.auth.views import LoginView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse
@@ -8,7 +9,7 @@ from django.views.generic import ListView, DetailView, CreateView
 from .models import Staff, Customer, GeneratedData, MatchedData, VisuallyMatchedData, ImportData
 from .forms import CustomerSelectForm, UploadFileSelectForm, VisuallyMatchedDataCreateForm, ImportDataCreateForm
 from datetime import datetime
-import openpyxl,  os, csv, urllib.parse, re
+import openpyxl,  os, csv, urllib.parse, re, io
 
 UPLOAD_NOT_COMPLETED = 0
 CSV_OUTPUT_COMPLETED = 1
@@ -110,20 +111,26 @@ class MatchedDataCreateView(CreateView):
         brycen_file_path = urllib.parse.unquote(matched_data.brycen_file.path)
         billing_file_path = urllib.parse.unquote(matched_data.billing_file.path)
 
-        file_path = create_csv(brycen_file_path, billing_file_path)
+        output_data = create_csv(brycen_file_path, billing_file_path)
         # print('file_path:{}'.format(file_path))
 
         # csv_createのfile_pathを取得し、file_pathからMatchedDataのmatched_data_fileフィールドに紐付け
-        path_split = os.path.split(file_path)
-        dir_name = path_split[0]
-        file_name = path_split[1]
-        dir_name_split = dir_name.split('/')
+        #path_split = os.path.split(file_path)
+        #dir_name = path_split[0]
+        #file_name = path_split[1]
+        #dir_name_split = dir_name.split('/')
         #dir_name_list = dir_name_split[6:]
-        dir_name_list = dir_name_split[5:]
-        matched_data_file_dir = '/'.join(dir_name_list)
-        matched_data_file_path = os.path.join(matched_data_file_dir, file_name)
-        matched_data.matched_data_file = matched_data_file_path
+        #matched_data_file_dir = '/'.join(dir_name_list)
+        #matched_data_file_path = os.path.join(matched_data_file_dir, file_name)
+        #matched_data.matched_data_file = matched_data_file_path
         # print('matched_data_file_path:{}'.format(matched_data.matched_data_file))
+
+        #print(matched_data.matched_data_file,f)
+        # ファイル命名
+        now = datetime.now()
+        file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
+
+        matched_data.matched_data_file.save(file_name, ContentFile(output_data))
 
         return super().form_valid(form)
 
@@ -394,7 +401,7 @@ def create_csv(f, f2):
     # ファイル命名
     # file_name = 'TXJ_付け合わせ済' + '(' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
     file_name = 'TXJ_付け合わせ済'+ now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分' + '.csv'
-    download_filename = {'download_filename': file_name}
+    #download_filename = {'download_filename': file_name}
     # print('filename1: {}'.format(file_name), )
 
     file_path = os.path.join(dir_name, file_name)
@@ -403,12 +410,22 @@ def create_csv(f, f2):
 
 
     # output_file = open(file_name, 'w', newline='')
-    with open(file_path, 'w', newline='') as output_file:
-        output_writer = csv.writer(output_file)
-        output_writer.writerow(
-            ['取引先名', '支店番号', '支店名', '日付', '業者番号', '業者名', '商品コード', '品目', '単価', '数量', '単位', '合計金額', '備考'])
-        output_writer.writerows(writer_data)
+    #with open(file_path, 'w', newline='') as output_file:
+        #output_writer = csv.writer(output_file)
+        #output_writer.writerow(
+            #['取引先名', '支店番号', '支店名', '日付', '業者番号', '業者名', '商品コード', '品目', '単価', '数量', '単位', '合計金額', '備考'])
+        #output_writer.writerows(writer_data)
     # print('filename2:{}'.format(file_name))
+
+
+    output = io.StringIO()
+    header = ['取引先名', '支店番号', '支店名', '日付', '業者番号', '業者名', '商品コード', '品目', '単価', '数量', '単位', '合計金額', '備考']
+    writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
+    writer.writerow(header)
+    writer.writerows(writer_data)
+    output_data = output.getvalue()
+    #print('writer:{}'.format())
+
 
     # TXJ以外の請求行（突合済ファイルに反映されない請求データ）をprintする。
     # for pass_item in pass_data:
@@ -416,8 +433,8 @@ def create_csv(f, f2):
         #'============= Pass \n store: {} {} \n item_remark : {}_{} \n pt    :{} {} ============'.format(
         # pass_item[0], pass_item[1], pass_item[2], pass_item[3], pass_item[4], pass_item[5]))
 
-    return file_path
-
+    #return file_path
+    return output_data
 
 class MatchedDataDetailView(DetailView):
     model = MatchedData
@@ -515,6 +532,10 @@ class ImportDataCreateView(CreateView):
         return form_kwargs
 
     def form_valid(self, form):
+        # ファイル命名
+        now = datetime.now()
+        file_name = 'TXJ_import_data_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分' + '.xlsx'
+
         if 'upload_and_create' in self.request.POST:
             import_data = form.save(commit=False)
             author = Staff.objects.get(author=self.request.user)
@@ -526,7 +547,8 @@ class ImportDataCreateView(CreateView):
 
             if import_data.visually_matched_file:
                 visually_matched_file_path = urllib.parse.unquote(import_data.visually_matched_file.path)
-                file_path = import_data_create(visually_matched_file_path)
+                output_data = import_data_create(visually_matched_file_path)
+                import_data.import_data_file.save(file_name, ContentFile(output_data))
 
         elif 'create' in self.request.POST:
             import_data = form.save(commit=False)
@@ -536,7 +558,8 @@ class ImportDataCreateView(CreateView):
             visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
             import_data.visually_matched_id = visually_matched.id
             matched_file_path = urllib.parse.unquote(visually_matched.matched.matched_data_file.path)
-            file_path = import_data_create(matched_file_path)
+            output_data = import_data_create(matched_file_path)
+            import_data.import_data_file.save(file_name, ContentFile(output_data))
             import_data.save()
 
 
@@ -548,16 +571,15 @@ class ImportDataCreateView(CreateView):
         generated.save()
 
         # create_import_dataのfile_pathを取得し、file_pathからImportDataのimport_data_fileフィールドに紐付け
-        path_split = os.path.split(file_path)
-        dir_name = path_split[0]
-        file_name = path_split[1]
-        dir_name_split = dir_name.split('/')
+        #path_split = os.path.split(file_path)
+        #dir_name = path_split[0]
+        #file_name = path_split[1]
+        #dir_name_split = dir_name.split('/')
         # /Users/name/PycharmProjects/Tool/media/matched_data_file/2020/1008/の/media/以降がdir_name_list
         #dir_name_list = dir_name_split[6:]
-        dir_name_list = dir_name_split[5:]
-        import_data_file_dir = '/'.join(dir_name_list)
-        import_data_file_path = os.path.join(import_data_file_dir, file_name)
-        import_data.import_data_file = import_data_file_path
+        #import_data_file_dir = '/'.join(dir_name_list)
+        #import_data_file_path = os.path.join(import_data_file_dir, file_name)
+        #import_data.import_data_file = import_data_file_path
         # print('import_data_file:{}'.format(import_data.import_data_file))
 
         return super().form_valid(form)
@@ -1025,25 +1047,26 @@ def import_data_create(f):
     ws.delete_rows(idx=row_count + 6, amount=max_row - (row_count + 6))  # idx= 何行目から　amount= 何行分削除するか
 
     # ディレクトリ命名
-    now = datetime.now()
-    today = now.strftime('%Y/%m%d/')
-    media_dir = settings.MEDIA_URL # media_dir: /media/
+    #now = datetime.now()
+    #today = now.strftime('%Y/%m%d/')
+    #media_dir = settings.MEDIA_URL # media_dir: /media/
 
-    dir_name = os.path.join(os.getcwd(), 'media', 'import_data_file', today)
+    #dir_name = os.path.join(os.getcwd(), 'media', 'import_data_file', today)
     # print('dir_name:{}'.format(dir_name))
 
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name, exist_ok=True)
+    #if not os.path.exists(dir_name):
+        #os.makedirs(dir_name, exist_ok=True)
 
     # ファイル命名
-    file_name = 'TXJ_import_data'+ now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分' + '.xlsx'
+    #file_name = 'TXJ_import_data'+ now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分' + '.xlsx'
     # print('filename1: {}'.format(file_name), )
 
-    file_path = os.path.join(dir_name, file_name)
+    #file_path = os.path.join(dir_name, file_name)
     # print('file_path: {} '.format(file_path))
 
-    wb.save(file_path)
-    return file_path
+    output_data = openpyxl.writer.excel.save_virtual_workbook(wb)
+    #output_data = wb.save(file_name)
+    return output_data
 
 
 class ImportDataDetailView(DetailView):
