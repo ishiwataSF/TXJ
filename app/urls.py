@@ -2,11 +2,12 @@ from django.conf import settings
 from django.contrib.staticfiles.urls import static
 from django.urls import path
 from .views import HistoryListView, GeneratedDataCreateView, MatchedDataCreateView, VisuallyMatchedDataCreateView, \
-    ImportDataCreateView, MatchedDataDetailView, ImportDataDetailView, LoginFormView
+    ImportDataCreateView, MatchedDataDetailView, ImportDataDetailView, LoginFormView, CustomerCelectAndFileUpLoadView
 
 urlpatterns = [
     path('', LoginFormView.as_view(), name='login'),
     path('top/', HistoryListView.as_view(), name='top'),
+    path('file_upload/', CustomerCelectAndFileUpLoadView.as_view(), name='file_upload'),
     path('customer_select/', GeneratedDataCreateView.as_view(), name='customer_select'),
     path('generated-data/<int:pk>/upload/', MatchedDataCreateView.as_view(), name='upload'),
     path('matched_data/<int:pk>/',MatchedDataDetailView.as_view(), name='matched_data_detail'),

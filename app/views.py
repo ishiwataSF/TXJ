@@ -5,9 +5,10 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse
-from django.views.generic import ListView, DetailView, CreateView
+from django.views.generic import ListView, DetailView, CreateView, edit
 from .models import Staff, Customer, GeneratedData, MatchedData, VisuallyMatchedData, ImportData
-from .forms import CustomerSelectForm, UploadFileSelectForm, VisuallyMatchedDataCreateForm, ImportDataCreateForm
+from .forms import CustomerSelectForm, UploadFileSelectForm, CustomerSelectAndFileUpLoadMultiFrom, \
+    VisuallyMatchedDataCreateForm, ImportDataCreateForm
 from datetime import datetime
 import openpyxl,  os, csv, urllib.parse, re, io
 
@@ -55,6 +56,50 @@ class HistoryListView(ListView):
 
         return context
 
+class CustomerCelectAndFileUpLoadView(CreateView):
+    form_class = CustomerSelectAndFileUpLoadMultiFrom
+    template_name = 'app/file_upload.html'
+
+    def form_valid(self, form):
+        #print(form['generated_data'])
+        #print(form['matched_data'])
+
+        generated_data = form['generated_data'].save(commit=False)
+        author = Staff.objects.get(author=self.request.user)
+        generated_data.author = author
+        generated_data.status = UPLOAD_NOT_COMPLETED
+        generated_data.save()
+
+        matched_data = form['matched_data'].save(commit=False)
+        matched_data.generated = generated_data
+        author = Staff.objects.get(author=self.request.user)
+        matched_data.author = author
+        matched_data.generated.status = CSV_OUTPUT_COMPLETED
+        matched_data.save()
+
+        brycen_file_path = urllib.parse.unquote(matched_data.brycen_file.path)
+        billing_file_path = urllib.parse.unquote(matched_data.billing_file.path)
+        print('brycen_file_path:{}'.format(brycen_file_path))
+        print('billing_file_path:{}'.format(billing_file_path))
+
+        output_data = create_csv(brycen_file_path, billing_file_path)
+
+        # ファイル命名
+        now = datetime.now()
+        file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
+
+        # ファイルsave
+        matched_data.matched_data_file.save(file_name, ContentFile(output_data))
+
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        matched = MatchedData.objects.last()
+        #print('self:{}'.format(self.()))
+        # MatchedData objectが取得できればself.object.pkも取得できる
+        return reverse('matched_data_detail', kwargs={'pk': matched.id})
+
+
 
 class GeneratedDataCreateView(CreateView):
     model = GeneratedData
@@ -72,6 +117,8 @@ class GeneratedDataCreateView(CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
+        print('self.object.pk:{}'.format(self.object.pk))
+        print('self:{}'.format(self))
         return reverse('upload', kwargs={'pk': self.object.pk})
 
     def get_context_data(self, **kwargs):
@@ -524,11 +571,12 @@ class ImportDataCreateView(CreateView):
 
     def get_form_kwargs(self, *args, **kwargs):
         form_kwargs = super().get_form_kwargs(*args, **kwargs)
+        form_kwargs.update({'method': self.request.method})
         if self.request.method == 'POST':
             if 'upload_and_create' in self.request.POST:
                 form_kwargs.update({'upload_and_create': self.request.POST.get('upload_and_create', None) is not None})
-            elif 'create' in self.request.POST:
-                form_kwargs.update({'create': self.request.POST.get('create', None) is not None})
+            #elif 'create' in self.request.POST:
+                #form_kwargs.update({'create': self.request.POST.get('create', None) is not None})
         return form_kwargs
 
     def form_valid(self, form):
@@ -550,6 +598,7 @@ class ImportDataCreateView(CreateView):
                 output_data = import_data_create(visually_matched_file_path)
                 import_data.import_data_file.save(file_name, ContentFile(output_data))
 
+
         elif 'create' in self.request.POST:
             import_data = form.save(commit=False)
             author = Staff.objects.get(author=self.request.user)
@@ -558,11 +607,10 @@ class ImportDataCreateView(CreateView):
             visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
             import_data.visually_matched_id = visually_matched.id
             matched_file_path = urllib.parse.unquote(visually_matched.matched.matched_data_file.path)
+            #import_data.visually_matched_file = None
             output_data = import_data_create(matched_file_path)
             import_data.import_data_file.save(file_name, ContentFile(output_data))
             import_data.save()
-
-
 
         generated_data_pk = import_data.visually_matched.matched.generated.pk
         # print('generated_data_pk:{}'.format(generated_data_pk))

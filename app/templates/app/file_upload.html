@@ -1,0 +1,18 @@
+{% extends 'app/base.html' %}
+
+{% block content %}
+
+<form method="POST" enctype="multipart/form-data">
+{% csrf_token %}
+    {{ form.generated_data }}<br>
+    {{ form.matched_data.brycen_file.label_tag }}<br>
+    {{ form.matched_data.brycen_file }}<br>
+    {{ form.matched_data.billing_file.label_tag }}<br>
+    {{ form.matched_data.billing_file }}<br>
+
+
+    <div class="select-button"><button type="submit" class="btn btn-outline-primary">save</button></div><br>
+</form>
+
+{% endblock %}
+
