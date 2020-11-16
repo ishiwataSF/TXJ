@@ -49,10 +49,11 @@
 <br>
 {% if not page == 'LOGIN' %}
 {% if not page == 'TOP' %}
+{% if not page == 'CHECK' %}
 <div class="side-bar" style="margin: auto; padding: 20px 20px 20px 30px;">
     <div class="status">
         {% if status == 'CUSTOMER_SELECT' %}
-        <p><button type="button" class="btn btn-info">ステータス：取引先選択</button></p>
+        <!--<p><button type="button" class="btn btn-info">ステータス：取引先選択</button></p>-->
         {% elif status is 0 %}
         <p><button type="button" class="btn btn-info">ステータス：未アップロード</button></p>
         {% elif status is 1 %}
@@ -69,20 +70,20 @@
           <h5 class="card-header">
             ステータスの説明
           </h5>
-          <div class="card">
+          <!--<div class="card">
             <div class="card-header" role="tab" id="heading">
               <h class="mb-0">
                 <a class="text-body d-block p-3 m-n3" data-toggle="collapse" href="#collapse" role="button" aria-expanded="true" aria-controls="collapse">
                   取引先選択
                 </a>
               </h>
-            </div><!-- /.card-header -->
+            </div> /.card-header x
              <div id="collapse" class="collapse{% if request.path == '/customer_select/' %}show{% endif %}" role="tabpanel" aria-labelledby="heading" data-parent="#accordion">
                  <div class="card-body">
                 作成したいインポートデータの取引先を<br>選択してください。
-                </div><!-- /.card-body -->
-            </div><!-- /.collapse -->
-          </div><!-- /.card -->
+                </div> /.card-body
+            </div> /.collapse
+          </div> /.card -->
           <div class="card">
             <div class="card-header" role="tab" id="headingOne">
               <h class="mb-0">
@@ -110,7 +111,7 @@
                 重複行を削除したCSVを出力しました。<br>
                 出力されたCSVとブライセン画面との<br>
                 目視確認を行ってください。<br><br>
-                ※目視確認後は「目視確認画面へ」を押下後「目視確認済」を押してください。
+                確認後は「目視確認済」を押してください。
               </div><!-- /.card-body -->
             </div><!-- /.collapse -->
           </div><!-- /.card -->
@@ -152,6 +153,7 @@
         <div class="content container">
             <div class="row">
                 <div class="col-md-13">
+                {% endif %}
                 {% endif %}
                 {% endif %}
                 {% block content %}

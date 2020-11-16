@@ -9,6 +9,8 @@ class CustomerSelectForm(forms.ModelForm):
     class Meta:
         model = GeneratedData
         fields = ('customer', )
+        labels = {'customer': '取引先選択'}
+        widgets = {'customer': forms.Select(attrs={'class': 'customer-select-form'})}
 
 
 class UploadFileSelectForm(forms.ModelForm):
@@ -16,6 +18,8 @@ class UploadFileSelectForm(forms.ModelForm):
     class Meta:
         model = MatchedData
         fields = ('brycen_file', 'billing_file', )
+        labels = {'brycen_file': 'ブライセン契約データ',
+                  'billing_file': '電子データ'}
         widgets = {'brycen_file': forms.FileInput(attrs={'accept': '.xlsx'}),
                    'billing_file': forms.FileInput(attrs={'accept': '.csv'})}
 

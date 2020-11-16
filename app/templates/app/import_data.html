@@ -17,7 +17,6 @@
                         <div class="p-3 card" style="width: 40rem;">
                             {% csrf_token %}
                             <label>修正したCSVファイルを選択してください。</label>
-                            <!--<input type="file" accept=".csv" name="visually_matched_file" id="visually_matched_file">-->
                             {{ form.visually_matched_file }}
                             {{ form.visually_matched_file.errors }}
                             ※ファイルを選択し、アップロードを押してください。<br><br>
@@ -33,7 +32,7 @@
         <div class="w-100 p-3 card-body">
                 <div id="question2" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
                     <div class="card" style="margin: auto; padding: 20px 20px 20px 10px;">
-                      <a href="{{ matched_data_file }}" download="{{ name }}">{{ matched_data_file_name }}</a><br>
+                      <a href="{{ matched.matched_data_file.url }}" download="{{ name }}">{{ matched.matched_data_filename }}</a><br>
                         上記ファイルを参照してインポートデータを作成します。<br><br>
                       <button type="submit" name="create" class="btn btn-outline-primary" style="width:200px;">インポートデータ作成</button>
                     </div>
@@ -42,7 +41,7 @@
     </div>
 </form>
 
-{{ matched }}
+
 
 
 {% endblock %}

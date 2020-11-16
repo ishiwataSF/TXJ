@@ -43,6 +43,9 @@ class MatchedData(models.Model):
     billing_file = models.FileField(upload_to='billing_file/%Y/%m%d/', validators=[FileExtensionValidator(['csv', ])]) # 電子データCSVを保存したい
     matched_data_file = models.FileField(upload_to='matched_data_file/%Y/%m%d/',
                                          validators=[FileExtensionValidator(['csv', ])], null=True,blank=True) # 突合済CSVを保存したい
+    @property
+    def brycen_filename(self):
+        return os.path.basename(self.brycen_file.name)
 
     @property
     def billing_filename(self):
@@ -67,3 +70,11 @@ class ImportData(models.Model):
                                              validators=[FileExtensionValidator(['csv', ])], null=True,blank=True) # 突合済CSV修正ありなら、修正版CSVを保存したい。無い場合もあり。
     import_data_file = models.FileField(upload_to='import_data_file/%Y/%m%d/', validators=[FileExtensionValidator(['xlsx', ])],
                                         null=True,blank=True) # インポートデータExcelを保存したい
+
+    @property
+    def visually_matched_filename(self):
+        return os.path.basename(self.visually_matched_file.name)
+
+    @property
+    def import_data_filename(self):
+        return os.path.basename(self.import_data_file.name)

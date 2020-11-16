@@ -2,17 +2,86 @@
 
 {% block content %}
 
+
 <form method="POST" enctype="multipart/form-data">
 {% csrf_token %}
-    {{ form.generated_data }}<br>
-    {{ form.matched_data.brycen_file.label_tag }}<br>
-    {{ form.matched_data.brycen_file }}<br>
-    {{ form.matched_data.billing_file.label_tag }}<br>
-    {{ form.matched_data.billing_file }}<br>
-
-
-    <div class="select-button"><button type="submit" class="btn btn-outline-primary">save</button></div><br>
+    <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
+    <label>作成したいインポートデータの取引先を選択してください。</label>
+    {{ form.generated_data.customer.label }}
+    {{ form.generated_data.customer }}
+    </div><br>
+    <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
+        <label>ブライセンから出力した契約データExcelファイルを選択してください。
+            契約データの絞り込み日付に注意してください。
+            <a href="#" data-toggle="modal" data-target="#brycen-fileModalCenter">
+                <!--<svg width="1.0625em" height="1em" viewBox="0 0 17 16" class="bi bi-exclamation-triangle-fill text-warning" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 5zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                </svg>-->
+                <font size="2">詳細</font>
+            </a></label><br>
+        {{ form.matched_data.brycen_file.label }}
+        {{ form.matched_data.brycen_file }}
+    </div><br>
+    <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
+        <label>電子データCSVファイルを選択してください。<br>
+                電子請求PTの場合は部門コードに注意してください。
+            <a href="#" data-toggle="modal" data-target="#billing-fileModalCenter">
+                <font size="2">詳細</font>
+            </a></label><br>
+    {{ form.matched_data.billing_file.label }}
+    {{ form.matched_data.billing_file }}
+    </div><br>
+    <div class="select-button"><button type="submit" class="btn btn-outline-primary">upload</button></div>
+    ※uploadを押すと選択したファイルを基に付け合わせ済ファイルを作成します。
 </form>
+
+<div class="modal fade" id="brycen-fileModalCenter" tabindex="-1" role="dialog" aria-labelledby="brycen-fileModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="brycen-fileModalCenterTitle">契約データ抽出方法</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+          ①ブライセンの契約問合せ画面を開く<br><br>
+          ②契約期限の範囲指定を選択し、<br>PTへ送付した依頼書の回収期間と同期間を入力<br>
+          例）回収期間→2020/9/26~2020/10/25<br>
+          ブライセン契約データ範囲指定日付→2020/9/26~10/25<br><br>
+          ③承認状態は選択せず、<br>並び替えは「3:契約開始日順」を選択後、問合せ→Excel出力<br>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <!--<button type="button" class="btn btn-primary">Save changes</button>-->
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="billing-fileModalCenter" tabindex="-1" role="dialog" aria-labelledby="billing-fileModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="billing-fileModalCenterTitle">電子請求PTファイルアップロード注意点</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        部門コードが下記の場合はエラーになります。<br><br>
+        数字4桁-数字1~4桁の書式になっていない（ハイフン含む）<br>
+        例） 2493-1→○ 　24931→×　jan-93→×<br>
+        ※部門コードが空欄でも部門名が入っていれば問題ありません。
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <!--<button type="button" class="btn btn-primary">Save changes</button>-->
+      </div>
+    </div>
+  </div>
+</div>
+
 
 {% endblock %}
 

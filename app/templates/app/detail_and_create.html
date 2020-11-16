@@ -1,0 +1,66 @@
+{% extends 'app/base.html' %}
+
+{% block content %}
+
+<h4>案件NO.{{ matched.generated.id }}</h4>
+<h5>取引先名:{{ matched.generated.customer }}</h5>
+<details>
+    <summary style="font-size: larger;">案件詳細</summary>
+    <label>アップロード情報</label>
+    <table border="1" style=" width: 45rem;" cellspacing="0" cellpadding="5">
+      <thead class="thead-light">
+      <tr><th>アップロード日</th><td>{{ matched.created_date }}</td></tr>
+      <tr><th>担当者</th><td>{{ matched.generated.author }}</td></tr>
+      <tr><th>契約データ</th><td><a href="{{ matched.brycen_file.url }}" download="{{ name }}">{{ matched.brycen_filename }}</a></td></tr>
+      <tr><th>請求データ</th><td><a href="{{ matched.billing_file.url }}" download="{{ name }}">{{ matched.billing_filename }}</a></td></tr>
+      </thead>
+    </table><br>
+</details><br>
+<a href="{{ matched.matched_data_file.url }}" download="{{ name }}" type="button" class="btn btn-primary">CSVファイルダウンロード<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-download" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path fill-rule="evenodd" d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+  <path fill-rule="evenodd" d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+</svg></a><br><br><br>
+
+<div class="card" style="width: 500; padding: 20px 10px 10px 10px;">
+    <font size="4">ブライセンとの目視確認を行いましたか？　<font size="2"><a href="#" data-toggle="modal" data-target="#CheckProcedureModalCenter">詳細</a></font></font><br>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.created_date }}　<button type="submit" class="btn btn-outline-primary">目視確認済</button><br>
+        {{ form.created_date.help_text}}
+    </form>
+</div><br>
+
+<div class="modal fade" id="CheckProcedureModalCenter" tabindex="-1" role="dialog" aria-labelledby="CheckProcedureModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="CheckProcedureModalCenterTitle">契約データとCSVファイル付け合わせ方法</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>①ブライセンの契約問合せ画面を開く</p>
+        <p>②契約期間の範囲指定を選択し、日付を入力　<!--<font size="2"><a href="{% url 'check_procedure' %}" target=_blank" rel="noopener noreferrer">詳細</a></font>--><br>
+        ※日付はPTへ送付した依頼書の回収期間と同期間を入力<br>
+        例）依頼書:回収期間→2020/9/26~2020/10/25<br>
+        契約期限:範囲指定→2020/9/26~10/25<br></p>
+        <p>③承認状態は選択せず並び替えは「3:契約開始日順」を<br>選択し問合せを押下</p>
+        <p>④付け合わせCSVと契約データに重複行があるか確認</p>
+        <p>⑤重複行があれば、CSVの該当行を削除</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <!--<button type="button" class="btn btn-primary">Save changes</button>-->
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!--タブ新規作成の場合
+<a href="#" target=_blank" rel="noopener noreferrer">詳細</a></font></font><br>-->
+
+{% endblock %}

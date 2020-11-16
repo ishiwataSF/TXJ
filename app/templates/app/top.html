@@ -2,10 +2,9 @@
 
 {% block content %}
 
-
 <div class="page-body" style="margin: auto; padding: 20px 20px 20px 30px;">
     <a href="{% url 'file_upload' %}" type="button" class="btn btn-outline-primary">FileUploadView</a><br><br>
-    <a href="{% url 'customer_select' %}" type="button" class="btn btn-outline-primary">新規案件を進める</a><br><br>
+    <!--<a href="{% url 'customer_select' %}" type="button" class="btn btn-outline-primary">新規案件を進める</a><br><br>-->
     <ul class="nav nav-tabs" id="myTab" role="tablist">
       <li class="nav-item">
         <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">途中案件</a>
@@ -36,7 +35,7 @@
                 {% if m.generated.status is 1 %}
                     <tr>
                         <td>{{ m.generated.pk }}</td>
-                        <td><a href="{%url 'matched_data_detail' pk=m.pk %}">{{ m.created_date }}</a></td>
+                        <td><a href="{%url 'detail_and_create' pk=m.pk %}">{{ m.created_date|date:"Y/n/j H:i" }}</a></td>
                         <td>CSV出力済</td>
                         <td>{{ m.generated.customer }}</td>
                         <td>{{ m.author}}</td>
@@ -48,7 +47,7 @@
                 {% if v.matched.generated.status is 2 %}
                     <tr>
                         <td>{{ v.matched.generated.pk }}</td>
-                        <td><a href="{%url 'import_data' pk=v.pk %}">{{ v.created_date }}</a></td>
+                        <td><a href="{%url 'import_data' pk=v.pk %}">{{ v.created_date|date:"Y/n/j H:i" }}</a></td>
                         <td>目視確認済</td>
                         <td>{{ v.matched.generated.customer }}</td>
                         <td>{{ v.author}}</td>
@@ -77,7 +76,7 @@
                 {% if i.visually_matched.matched.generated.status is 3 %}
                     <tr>
                         <td>{{ i.visually_matched.matched.generated.pk }}</td>
-                        <td><a href="{% url 'import_data_detail' pk=i.pk %}">{{ i.created_date }}</a></td>
+                        <td><a href="{% url 'import_data_detail' pk=i.pk %}">{{ i.created_date|date:"Y/n/j H:i" }}</a></td>
                         <td>{{ i.author }}</td>
                         <td>{{ i.visually_matched.matched.generated.customer }}</td>
                         <td><a href="{{ i.visually_matched.matched.billing_file.url }}">{{ i.visually_matched.matched.billing_filename }}</a></td>

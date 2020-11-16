@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from django.contrib.auth.views import LoginView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.conf import settings
@@ -5,12 +6,13 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse
-from django.views.generic import ListView, DetailView, CreateView, edit
+from django.views.generic import ListView, DetailView, CreateView, TemplateView
 from .models import Staff, Customer, GeneratedData, MatchedData, VisuallyMatchedData, ImportData
 from .forms import CustomerSelectForm, UploadFileSelectForm, CustomerSelectAndFileUpLoadMultiFrom, \
     VisuallyMatchedDataCreateForm, ImportDataCreateForm
 from datetime import datetime
 import openpyxl,  os, csv, urllib.parse, re, io
+
 
 UPLOAD_NOT_COMPLETED = 0
 CSV_OUTPUT_COMPLETED = 1
@@ -53,13 +55,20 @@ class HistoryListView(ListView):
         context['import_data'] = import_data
         context['page'] = 'TOP'
 
-
         return context
 
-class CustomerCelectAndFileUpLoadView(CreateView):
+class CustomerSelectAndFileUpLoadView(CreateView):
     form_class = CustomerSelectAndFileUpLoadMultiFrom
     template_name = 'app/file_upload.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status'] = UPLOAD_NOT_COMPLETED
+
+
+        return context
+
+    @transaction.atomic
     def form_valid(self, form):
         #print(form['generated_data'])
         #print(form['matched_data'])
@@ -94,11 +103,42 @@ class CustomerCelectAndFileUpLoadView(CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        matched = MatchedData.objects.last()
-        #print('self:{}'.format(self.()))
-        # MatchedData objectが取得できればself.object.pkも取得できる
-        return reverse('matched_data_detail', kwargs={'pk': matched.id})
+        matched = self.object['matched_data']
+        #return reverse('matched_data_detail', kwargs={'pk': matched.id})
+        return reverse('detail_and_create', kwargs={'pk': matched.id})
 
+class MatchedDataDetailAndVisuallyMatchedDataCreateView(DetailView, CreateView):
+    model = MatchedData
+    form_class = VisuallyMatchedDataCreateForm
+    template_name = 'app/detail_and_create.html'
+
+    def get_context_data(self, **kwargs):
+        matched_data_pk = self.kwargs['pk']
+        matched = MatchedData.objects.get(pk=matched_data_pk)
+        context = super().get_context_data(**kwargs)
+        context['matched'] = matched
+        context['status'] = CSV_OUTPUT_COMPLETED
+
+        return context
+
+    def form_valid(self, form):
+        visually_matched = form.save(commit=False)
+        author = Staff.objects.get(author=self.request.user)
+        visually_matched.author = author
+        matched_data_pk = self.kwargs['pk']
+        matched = MatchedData.objects.get(pk=matched_data_pk)
+        visually_matched.matched_id = matched.id
+        visually_matched.save()
+
+        generated_data_pk = visually_matched.matched.generated.id
+        generated = GeneratedData.objects.get(pk=generated_data_pk)
+        generated.status = VISUALLY_CONFIRMED
+        generated.save()
+
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('import_data', kwargs={'pk': self.object.pk})
 
 
 class GeneratedDataCreateView(CreateView):
@@ -118,7 +158,7 @@ class GeneratedDataCreateView(CreateView):
 
     def get_success_url(self):
         print('self.object.pk:{}'.format(self.object.pk))
-        print('self:{}'.format(self))
+        print('self:{}'.format(self.object))
         return reverse('upload', kwargs={'pk': self.object.pk})
 
     def get_context_data(self, **kwargs):
@@ -491,19 +531,19 @@ class MatchedDataDetailView(DetailView):
         matched_data_pk = self.kwargs['pk']
         matched = MatchedData.objects.get(pk=matched_data_pk)
 
-        brycen_file_path = urllib.parse.unquote(matched.brycen_file.url)
-        brycen_file_path_split = os.path.split(brycen_file_path)
-        brycen_file_name = brycen_file_path_split[1]
+        #brycen_file_path = urllib.parse.unquote(matched.brycen_file.url)
+        #brycen_file_path_split = os.path.split(brycen_file_path)
+        #brycen_file_name = brycen_file_path_split[1]
 
-        billing_file_path = urllib.parse.unquote(matched.billing_file.url)
-        billing_file_path_split = os.path.split(billing_file_path)
-        billing_file_name = billing_file_path_split[1]
+        #billing_file_path = urllib.parse.unquote(matched.billing_file.url)
+        #billing_file_path_split = os.path.split(billing_file_path)
+        #billing_file_name = billing_file_path_split[1]
 
         context = super().get_context_data(**kwargs)
         context['matched'] = matched
-        context['brycen_file_name'] = brycen_file_name
-        context['billing_file_name'] = billing_file_name
-        context['matched_file'] = urllib.parse.unquote(matched.matched_data_file.url)
+        #context['brycen_file_name'] = brycen_file_name
+        #context['billing_file_name'] = billing_file_name
+        #context['matched_file'] = urllib.parse.unquote(matched.matched_data_file.url)
         context['status'] = CSV_OUTPUT_COMPLETED
 
         return context
@@ -517,16 +557,17 @@ class VisuallyMatchedDataCreateView(CreateView):
     def get_context_data(self, **kwargs):
         matched_data_pk = self.kwargs['pk']
         matched = MatchedData.objects.get(pk=matched_data_pk)
-        matched_file_path = urllib.parse.unquote(matched.matched_data_file.url)
-        matched_file_path_split = os.path.split(matched_file_path)
-        matched_file_name = matched_file_path_split[1]
+        #matched_file_path = urllib.parse.unquote(matched.matched_data_file.url)
+        #matched_file_path_split = os.path.split(matched_file_path)
+        #matched_file_name = matched_file_path_split[1]
         context = super().get_context_data(**kwargs)
         context['status'] = CSV_OUTPUT_COMPLETED
         context['matched'] = matched
-        context['matched_data_file_name'] = matched_file_name
+        #context['matched_data_file_name'] = matched_file_name
 
         return context
 
+    @transaction.atomic
     def form_valid(self, form):
         visually_matched = form.save(commit=False)
         author = Staff.objects.get(author=self.request.user)
@@ -558,13 +599,14 @@ class ImportDataCreateView(CreateView):
 
         matched_data_pk = visually_matched.matched_id
         matched = MatchedData.objects.get(pk=matched_data_pk)
-        matched_data_file = urllib.parse.unquote(matched.matched_data_file.url)
-        matched_data_file_path_split = os.path.split(matched_data_file)
-        matched_data_file_name = matched_data_file_path_split[1]
+        #matched_data_file = urllib.parse.unquote(matched.matched_data_file.url)
+        #matched_data_file_path_split = os.path.split(matched_data_file)
+        #matched_data_file_name = matched_data_file_path_split[1]
 
         context = super().get_context_data(**kwargs)
-        context['matched_data_file_name'] = matched_data_file_name
-        context['matched_data_file'] = matched_data_file
+        context['matched'] = matched
+        #context['matched_data_file_name'] = matched_data_file_name
+        #context['matched_data_file'] = matched_data_file
         context['visually_matched'] = visually_matched
         context['status'] = VISUALLY_CONFIRMED
         return context
@@ -579,6 +621,7 @@ class ImportDataCreateView(CreateView):
                 #form_kwargs.update({'create': self.request.POST.get('create', None) is not None})
         return form_kwargs
 
+    @transaction.atomic
     def form_valid(self, form):
         # ファイル命名
         now = datetime.now()
@@ -1117,6 +1160,15 @@ def import_data_create(f):
     return output_data
 
 
+class MatchedDataCheckProcedureTmprateView(TemplateView):
+    template_name = 'app/check_procedure.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page'] = 'CHECK'
+        return context
+
+
 class ImportDataDetailView(DetailView):
     model = ImportData
     template_name = 'app/import_data_detail.html'
@@ -1127,32 +1179,32 @@ class ImportDataDetailView(DetailView):
 
         matched_data_pk = import_data.visually_matched.matched.pk
         matched_data = MatchedData.objects.get(pk=matched_data_pk)
-        matched_data_file_path = urllib.parse.unquote(matched_data.matched_data_file.url)
-        matched_data_file_path_split = os.path.split(matched_data_file_path)
-        matched_data_file_name = matched_data_file_path_split[1]
+        #matched_data_file_path = urllib.parse.unquote(matched_data.matched_data_file.url)
+        #matched_data_file_path_split = os.path.split(matched_data_file_path)
+        #matched_data_file_name = matched_data_file_path_split[1]
 
-        brycen_file_path = urllib.parse.unquote(matched_data.brycen_file.url)
-        brycen_file_path_split = os.path.split(brycen_file_path)
-        brycen_file_name = brycen_file_path_split[1]
+        #brycen_file_path = urllib.parse.unquote(matched_data.brycen_file.url)
+        #brycen_file_path_split = os.path.split(brycen_file_path)
+        #brycen_file_name = brycen_file_path_split[1]
 
-        billing_file_path = urllib.parse.unquote(matched_data.billing_file.url)
-        billing_file_path_split = os.path.split(billing_file_path)
-        billing_file_name = billing_file_path_split[1]
+        #billing_file_path = urllib.parse.unquote(matched_data.billing_file.url)
+        #billing_file_path_split = os.path.split(billing_file_path)
+        #billing_file_name = billing_file_path_split[1]
 
         context = super().get_context_data(**kwargs)
 
-        if import_data.visually_matched_file:
-            visually_matched_file_path = urllib.parse.unquote(import_data.visually_matched_file.url)
-            visually_matched_file_path_split = os.path.split(visually_matched_file_path)
-            visually_matched_file_name = visually_matched_file_path_split[1]
-            context['visually_matched_file_name'] = visually_matched_file_name
+        #if import_data.visually_matched_file:
+            #visually_matched_file_path = urllib.parse.unquote(import_data.visually_matched_file.url)
+            #visually_matched_file_path_split = os.path.split(visually_matched_file_path)
+            #visually_matched_file_name = visually_matched_file_path_split[1]
+            #context['visually_matched_file_name'] = visually_matched_file_name
 
         context['import_data'] = import_data
-        context['import_data_file'] = urllib.parse.unquote(import_data.import_data_file.url)
+        #context['import_data_file'] = urllib.parse.unquote(import_data.import_data_file.url)
         context['matched_data'] = matched_data
-        context['matched_data_file_name'] = matched_data_file_name
-        context['brycen_file_name'] = brycen_file_name
-        context['billing_file_name'] = billing_file_name
+        #context['matched_data_file_name'] = matched_data_file_name
+        #context['brycen_file_name'] = brycen_file_name
+        #context['billing_file_name'] = billing_file_name
         context['status'] = IMPORT_DATA_OUTPUT_COMPLETED
         return context
 
