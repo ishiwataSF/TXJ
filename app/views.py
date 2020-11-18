@@ -8,10 +8,10 @@ from django.utils import timezone
 from django.urls import reverse
 from django.views.generic import ListView, DetailView, CreateView, TemplateView
 from .models import Staff, Customer, GeneratedData, MatchedData, VisuallyMatchedData, ImportData
-from .forms import CustomerSelectForm, UploadFileSelectForm, CustomerSelectAndFileUpLoadMultiFrom, \
-    VisuallyMatchedDataCreateForm, ImportDataCreateForm
+from .forms import CustomerSelectAndFileUpLoadMultiFrom, VisuallyMatchedDataCreateForm, ImportDataCreateForm
 from datetime import datetime
-import openpyxl,  os, csv, urllib.parse, re, io
+import openpyxl,  os, csv, codecs, chardet, urllib.parse, re, io
+
 
 
 UPLOAD_NOT_COMPLETED = 0
@@ -65,14 +65,10 @@ class CustomerSelectAndFileUpLoadView(CreateView):
         context = super().get_context_data(**kwargs)
         context['status'] = UPLOAD_NOT_COMPLETED
 
-
         return context
 
     @transaction.atomic
     def form_valid(self, form):
-        #print(form['generated_data'])
-        #print(form['matched_data'])
-
         generated_data = form['generated_data'].save(commit=False)
         author = Staff.objects.get(author=self.request.user)
         generated_data.author = author
@@ -91,7 +87,13 @@ class CustomerSelectAndFileUpLoadView(CreateView):
         print('brycen_file_path:{}'.format(brycen_file_path))
         print('billing_file_path:{}'.format(billing_file_path))
 
-        output_data = create_csv(brycen_file_path, billing_file_path)
+        output = create_csv(brycen_file_path, billing_file_path)
+        output_data = output[0]
+        binary = output[1]
+        if binary == 'CP932':
+            output_data.encode('CP932')
+
+        print('output_data_binary', binary)
 
         # ファイル命名
         now = datetime.now()
@@ -104,7 +106,6 @@ class CustomerSelectAndFileUpLoadView(CreateView):
 
     def get_success_url(self):
         matched = self.object['matched_data']
-        #return reverse('matched_data_detail', kwargs={'pk': matched.id})
         return reverse('detail_and_create', kwargs={'pk': matched.id})
 
 class MatchedDataDetailAndVisuallyMatchedDataCreateView(DetailView, CreateView):
@@ -139,90 +140,6 @@ class MatchedDataDetailAndVisuallyMatchedDataCreateView(DetailView, CreateView):
 
     def get_success_url(self):
         return reverse('import_data', kwargs={'pk': self.object.pk})
-
-
-class GeneratedDataCreateView(CreateView):
-    model = GeneratedData
-    form_class = CustomerSelectForm
-    template_name = 'app/customer_select.html'
-
-    @transaction.atomic
-    def form_valid(self, form):
-        generated_data = form.save(commit=False)
-        author = Staff.objects.get(author=self.request.user)
-        generated_data.author = author
-        generated_data.status = GeneratedData.UPLOAD_NOT_COMPLETED
-        generated_data.save()
-
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        print('self.object.pk:{}'.format(self.object.pk))
-        print('self:{}'.format(self.object))
-        return reverse('upload', kwargs={'pk': self.object.pk})
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data()
-        context['status'] = 'CUSTOMER_SELECT'
-
-        return context
-
-
-class MatchedDataCreateView(CreateView):
-    model = MatchedData
-    template_name = 'app/upload.html'
-    form_class = UploadFileSelectForm
-
-    def get_context_data(self, **kwargs):
-        generated_data_pk = self.kwargs['pk']
-        generated_data = GeneratedData.objects.get(pk=generated_data_pk)
-        context = super().get_context_data(**kwargs)
-        context['generated_data'] = generated_data
-        context['status'] = UPLOAD_NOT_COMPLETED
-
-        return context
-
-    @transaction.atomic
-    def form_valid(self, form):
-        matched_data = form.save(commit=False)
-        author = Staff.objects.get(author=self.request.user)
-        matched_data.author = author
-        generated_data_pk = self.kwargs['pk']
-        matched_data.generated_id = generated_data_pk
-        matched_data.save()
-
-        generated = GeneratedData.objects.get(pk=generated_data_pk)
-        generated.status = GeneratedData.CSV_OUTPUT_COMPLETED
-        generated.save()
-
-        brycen_file_path = urllib.parse.unquote(matched_data.brycen_file.path)
-        billing_file_path = urllib.parse.unquote(matched_data.billing_file.path)
-
-        output_data = create_csv(brycen_file_path, billing_file_path)
-        # print('file_path:{}'.format(file_path))
-
-        # csv_createのfile_pathを取得し、file_pathからMatchedDataのmatched_data_fileフィールドに紐付け
-        #path_split = os.path.split(file_path)
-        #dir_name = path_split[0]
-        #file_name = path_split[1]
-        #dir_name_split = dir_name.split('/')
-        #dir_name_list = dir_name_split[6:]
-        #matched_data_file_dir = '/'.join(dir_name_list)
-        #matched_data_file_path = os.path.join(matched_data_file_dir, file_name)
-        #matched_data.matched_data_file = matched_data_file_path
-        # print('matched_data_file_path:{}'.format(matched_data.matched_data_file))
-
-        #print(matched_data.matched_data_file,f)
-        # ファイル命名
-        now = datetime.now()
-        file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
-
-        matched_data.matched_data_file.save(file_name, ContentFile(output_data))
-
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse('matched_data_detail', kwargs={'pk': self.object.pk})
 
 
 # 突合スクリプト
@@ -286,7 +203,16 @@ def create_csv(f, f2):
             brycen_list = [store_code, pt_code, unit_price, amount, total]
             brycen_data.append(brycen_list)
 
-    file = open(f2)
+    file_b = open(f2, mode='rb')
+    file_b_read = file_b.read()
+    binary = chardet.detect(file_b_read)
+    print('billing_file binary:',binary)
+    if binary['encoding'] == 'CP932':
+        print('encoding is CP932')
+        file = open(f2, encoding="shift-jis", errors='replace')
+    else:
+        print('encoding is utf-8')
+        file = open(f2, encoding="utf-8", errors='replace')
     reader = csv.reader(file)
     data = list(reader)
     data.remove(data[0])
@@ -323,7 +249,6 @@ def create_csv(f, f2):
                       '2508-36': '北九州コンテナ事業所', '2508-37': '中九州センター'}
 
     billing_data = []
-    day_billing_data = []
     writer_data = []
     pass_data = []
 
@@ -365,7 +290,7 @@ def create_csv(f, f2):
             otherTOLL not in store_nam and otherTOLL not in item_nam and otherTOLL not in remark) and \
                 ('2493' not in store_code and '2493' not in remark and \
                  '2505' not in store_code and '2505' not in remark and '2508' not in store_code and '2508' not in remark):
-            if int(pt_code) not in [3370, 3443, 3381, 1023, 3761, 1100, 5172, 3350, 2857, 5145, 2877]:
+            if int(pt_code) not in [1023, 1100, 2857, 2877, 3350, 3353, 3370, 3381, 3422, 3443, 3742, 3761, 5145, 5172]:
                 pass_data.append([store_code, store_nam, item_nam, remark, pt_code, pt_nam])
                 continue
 
@@ -390,16 +315,6 @@ def create_csv(f, f2):
                         store_nam = value
                         break
 
-            # else:
-            # print(pt_code, store_nam)
-            # 一度、store_namに値を探して入れてあげているにも関わらず、store_nameがない！！
-            # この時の処理をどうする？？
-            # print('if not store_nam:', store_code,store_nam, pt_code, pt_nam)
-
-            # 既にstore_namはある前提！
-            # if store_nam:
-            # print('split(-で分割）前にstore_codeが文字化けしていないか？', store_code, store_nam, pt_code, pt_nam)
-
             store_split = store_code.split('-')
             customer_mach = re.search(r'(\d{4})', str(store_split[0]))
             # split後のstore_codeが文字化けしてたら、↓コードの実装を検討する
@@ -412,8 +327,6 @@ def create_csv(f, f2):
             else:
                 customer_code = store_split[0]
                 store_code = int(store_split[1])
-                # print('else customer_code, store_code:', customer_code, store_code)
-
 
         # この段階で、さらにstore_codeがなければ、どうやって処理を続けるか考える？
         # 更に、store_codeもstore_namもない行に対しての処理はココ！
@@ -421,14 +334,13 @@ def create_csv(f, f2):
             store_code = '未入力'
             customer_code = '未入力'
 
-        # print('未入力store_code, store_nam, pt_code, pt_nam', store_code, store_nam, pt_code, pt_nam)
 
-        if int(pt_code) == 3422:
-            if 'プラ' in remark or 'ﾌﾟﾗ' in remark:
-                item_nam = 'プラパレット'
-            else:
-                item_nam = '木パレット'
-        elif int(pt_code) == 3742:
+        #if int(pt_code) == 3422:
+            #if 'プラ' in remark or 'ﾌﾟﾗ' in remark or 'プラ' in item_nam or 'ﾌﾟﾗ' in item_nam:
+                #item_nam = 'プラパレット'
+            #else:
+                #item_nam = '木パレット'
+        if int(pt_code) == 3742:
             if store_code == '未入力':
                 customer_code = '2493'
                 item_nam = '木パレット'
@@ -440,17 +352,13 @@ def create_csv(f, f2):
                     store_nam = '京都支店'
 
         billing_list = [store_code, pt_code, unit_price, amount, total]
-        # billing_list: <class 'int'> <class 'int'> <class 'str'> <class 'str'> <class 'str'>
-        # print('billing_list:',type(store_code), type(pt_code), type(unit_price), type(amount), type(total))
         billing_data.append(billing_list)
 
         all_billing_data = [customer_code, store_code, store_nam, day, pt_code, pt_nam, item_code, item_nam,
                             unit_price, amount, unit, total, remark]
-        # all_billing_data = [store_code, store_nam, day, pt_code, pt_nam, item_code, item_nam, unit_price, amount, unit, total, remark]
 
         compare = [all_billing_data[1], all_billing_data[4], all_billing_data[8], all_billing_data[9],
                    all_billing_data[11]]
-        # compare = [all_billing_data[0], all_billing_data[3], all_billing_data[7], all_billing_data[8],all_billing_data[10]]
 
         for b in brycen_data:
             # brycen_dataとbilling_listのstore_code、pt_code、unit_price、amount、totalが
@@ -459,133 +367,29 @@ def create_csv(f, f2):
                 # print('mach:' billing_list)
                 billing_data.remove(b)
 
-
-            # brycen_dataとbilling_listのstore_code、pt_code、totalが
-            # 完全一致した行をbilling_dataからremove
-            # elif [billing_list[STORE_CODE_LIST_INDEX], billing_list[PT_CODE_LIST_INDEX],
-                  # billing_list[TOTAL_LIST_INDEX]] == [b[BRYCEN_STORE_CODE_LIST_INDEX], b[BRYCEN_PT_CODE_LIST_INDEX],
-                                                      # b[BRYCEN_TOTAL_LIST_INDEX]]:
-                # billing_data.remove(billing_list)
-
         # brycen_dataとbilling_dataが不一致だった場合のみ
         # writer_dataにappend
         if compare in billing_data:
             writer_data.append(all_billing_data)
 
-
-
-    # ディレクトリ命名
-    now = datetime.now()
-    today = now.strftime('%Y/%m%d/')
-    media_dir = settings.MEDIA_URL # media_dir: /media/
-
-    dir_name = os.path.join(os.getcwd(), 'media', 'matched_data_file', today)
-    print('dir_name:{}'.format(dir_name))
-
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name, exist_ok=True)
-
-    # ファイル命名
-    # file_name = 'TXJ_付け合わせ済' + '(' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
-    file_name = 'TXJ_付け合わせ済'+ now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分' + '.csv'
-    #download_filename = {'download_filename': file_name}
-    # print('filename1: {}'.format(file_name), )
-
-    file_path = os.path.join(dir_name, file_name)
-    print('file_path:{}'.format(file_path))
-    # print('file_path: {} '.format(file_path))
-
-
-    # output_file = open(file_name, 'w', newline='')
-    #with open(file_path, 'w', newline='') as output_file:
-        #output_writer = csv.writer(output_file)
-        #output_writer.writerow(
-            #['取引先名', '支店番号', '支店名', '日付', '業者番号', '業者名', '商品コード', '品目', '単価', '数量', '単位', '合計金額', '備考'])
-        #output_writer.writerows(writer_data)
-    # print('filename2:{}'.format(file_name))
-
-
     output = io.StringIO()
     header = ['取引先名', '支店番号', '支店名', '日付', '業者番号', '業者名', '商品コード', '品目', '単価', '数量', '単位', '合計金額', '備考']
-    writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
+    writer = csv.writer(output,  quoting=csv.QUOTE_NONNUMERIC)
     writer.writerow(header)
     writer.writerows(writer_data)
     output_data = output.getvalue()
-    #print('writer:{}'.format())
-
 
     # TXJ以外の請求行（突合済ファイルに反映されない請求データ）をprintする。
-    # for pass_item in pass_data:
-        # print(
+    for pass_item in pass_data:
+        #print(
         #'============= Pass \n store: {} {} \n item_remark : {}_{} \n pt    :{} {} ============'.format(
-        # pass_item[0], pass_item[1], pass_item[2], pass_item[3], pass_item[4], pass_item[5]))
+        pass_list = ['============= Pass \n store: {} {} \n item_remark : {}_{} \n pt    :{} {} ============'.format(
+            pass_item[0], pass_item[1], pass_item[2], pass_item[3], pass_item[4], pass_item[5])]
+        print('pass_list:{}'.format(pass_list))
+
 
     #return file_path
-    return output_data
-
-class MatchedDataDetailView(DetailView):
-    model = MatchedData
-    template_name = 'app/matched_data_detail.html'
-
-    def get_context_data(self, **kwargs):
-        matched_data_pk = self.kwargs['pk']
-        matched = MatchedData.objects.get(pk=matched_data_pk)
-
-        #brycen_file_path = urllib.parse.unquote(matched.brycen_file.url)
-        #brycen_file_path_split = os.path.split(brycen_file_path)
-        #brycen_file_name = brycen_file_path_split[1]
-
-        #billing_file_path = urllib.parse.unquote(matched.billing_file.url)
-        #billing_file_path_split = os.path.split(billing_file_path)
-        #billing_file_name = billing_file_path_split[1]
-
-        context = super().get_context_data(**kwargs)
-        context['matched'] = matched
-        #context['brycen_file_name'] = brycen_file_name
-        #context['billing_file_name'] = billing_file_name
-        #context['matched_file'] = urllib.parse.unquote(matched.matched_data_file.url)
-        context['status'] = CSV_OUTPUT_COMPLETED
-
-        return context
-
-
-class VisuallyMatchedDataCreateView(CreateView):
-    model = VisuallyMatchedData
-    form_class = VisuallyMatchedDataCreateForm
-    template_name = 'app/visually_match.html'
-
-    def get_context_data(self, **kwargs):
-        matched_data_pk = self.kwargs['pk']
-        matched = MatchedData.objects.get(pk=matched_data_pk)
-        #matched_file_path = urllib.parse.unquote(matched.matched_data_file.url)
-        #matched_file_path_split = os.path.split(matched_file_path)
-        #matched_file_name = matched_file_path_split[1]
-        context = super().get_context_data(**kwargs)
-        context['status'] = CSV_OUTPUT_COMPLETED
-        context['matched'] = matched
-        #context['matched_data_file_name'] = matched_file_name
-
-        return context
-
-    @transaction.atomic
-    def form_valid(self, form):
-        visually_matched = form.save(commit=False)
-        author = Staff.objects.get(author=self.request.user)
-        visually_matched.author = author
-        matched_data_pk = self.kwargs['pk']
-        matched = MatchedData.objects.get(pk=matched_data_pk)
-        visually_matched.matched_id = matched.id
-        visually_matched.save()
-
-        generated_data_pk = visually_matched.matched.generated.pk
-        generated = GeneratedData.objects.get(pk=generated_data_pk)
-        generated.status = GeneratedData.VISUALLY_CONFIRMED
-        generated.save()
-
-        return super().form_valid(form)
-
-    def get_success_url(self, **kwargs):
-        return reverse('import_data', kwargs={'pk': self.object.pk})
+    return output_data, binary
 
 
 class ImportDataCreateView(CreateView):
@@ -599,14 +403,9 @@ class ImportDataCreateView(CreateView):
 
         matched_data_pk = visually_matched.matched_id
         matched = MatchedData.objects.get(pk=matched_data_pk)
-        #matched_data_file = urllib.parse.unquote(matched.matched_data_file.url)
-        #matched_data_file_path_split = os.path.split(matched_data_file)
-        #matched_data_file_name = matched_data_file_path_split[1]
 
         context = super().get_context_data(**kwargs)
         context['matched'] = matched
-        #context['matched_data_file_name'] = matched_data_file_name
-        #context['matched_data_file'] = matched_data_file
         context['visually_matched'] = visually_matched
         context['status'] = VISUALLY_CONFIRMED
         return context
@@ -617,8 +416,7 @@ class ImportDataCreateView(CreateView):
         if self.request.method == 'POST':
             if 'upload_and_create' in self.request.POST:
                 form_kwargs.update({'upload_and_create': self.request.POST.get('upload_and_create', None) is not None})
-            #elif 'create' in self.request.POST:
-                #form_kwargs.update({'create': self.request.POST.get('create', None) is not None})
+
         return form_kwargs
 
     @transaction.atomic
@@ -650,28 +448,16 @@ class ImportDataCreateView(CreateView):
             visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
             import_data.visually_matched_id = visually_matched.id
             matched_file_path = urllib.parse.unquote(visually_matched.matched.matched_data_file.path)
-            #import_data.visually_matched_file = None
+
             output_data = import_data_create(matched_file_path)
             import_data.import_data_file.save(file_name, ContentFile(output_data))
             import_data.save()
 
         generated_data_pk = import_data.visually_matched.matched.generated.pk
-        # print('generated_data_pk:{}'.format(generated_data_pk))
         generated = GeneratedData.objects.get(pk=generated_data_pk)
         generated.status = GeneratedData.IMPORT_DATA_OUTPUT_COMPLETED
         generated.save()
 
-        # create_import_dataのfile_pathを取得し、file_pathからImportDataのimport_data_fileフィールドに紐付け
-        #path_split = os.path.split(file_path)
-        #dir_name = path_split[0]
-        #file_name = path_split[1]
-        #dir_name_split = dir_name.split('/')
-        # /Users/name/PycharmProjects/Tool/media/matched_data_file/2020/1008/の/media/以降がdir_name_list
-        #dir_name_list = dir_name_split[6:]
-        #import_data_file_dir = '/'.join(dir_name_list)
-        #import_data_file_path = os.path.join(import_data_file_dir, file_name)
-        #import_data.import_data_file = import_data_file_path
-        # print('import_data_file:{}'.format(import_data.import_data_file))
 
         return super().form_valid(form)
 
@@ -722,10 +508,13 @@ def import_data_create(f):
         l[REMARK_LIST_INDEX] = str(unit_price) + '円' + '×' + '{:,}'.format(int(amount)) + 'kg'
         l[UNIT_CODE_LIST_INDEX] = '2'
 
-    file = open(f)  # csvファイルを読み込んだ内容をfileに入れる
+    file_b = open(f, mode='rb')
+    file_b_read = file_b.read()
+    print('visually_matched_file binary', chardet.detect(file_b_read))
+
+    file = open(f, encoding="utf8", errors='replace')  # csvファイルを読み込んだ内容をfileに入れる
     reader = csv.reader(file)  # csvファイルを開いて、開いた内容をreaderに入れる　
     data = list(reader)  # 開いた内容をリストで取得して、dataに入れる
-    # last_row = sum(1 for i in open(f))  # CSVファイルの最終行を取得
 
     #  pt_codeが10101の単価15だった場合の行数を取得
     n_row_count = 1
@@ -733,13 +522,9 @@ def import_data_create(f):
         if n[PT_CODE_COL_NUM] == '10101' and n[UNIT_PRICE_COL_NUM] == '15':
             n_row_count += 1
 
-    # write_max_row = last_row - n_row_count  # csv最終行数 - pt_code 10101の単価15だった場合の行数　= Excelに書き出される行数値 ex. 130 - 5 = 125
 
     wb = openpyxl.load_workbook('/Users/ishiwata/PycharmProjects/Tool/media/import_data_format_file/import_data_format.xlsx')
     ws = wb.active
-    # max_row = ws.max_row + 1
-    # ws.delete_rows(idx=write_max_row + n_row_count, amount=max_row - last_row)  # idx= 何行目から　amount= 何行分削除するか
-    # print('max',max - 1,'amount',max - last_row,'indx',write_max_row + n_row_count)
 
     current_dir = os.getcwd()
 
@@ -1179,32 +964,10 @@ class ImportDataDetailView(DetailView):
 
         matched_data_pk = import_data.visually_matched.matched.pk
         matched_data = MatchedData.objects.get(pk=matched_data_pk)
-        #matched_data_file_path = urllib.parse.unquote(matched_data.matched_data_file.url)
-        #matched_data_file_path_split = os.path.split(matched_data_file_path)
-        #matched_data_file_name = matched_data_file_path_split[1]
-
-        #brycen_file_path = urllib.parse.unquote(matched_data.brycen_file.url)
-        #brycen_file_path_split = os.path.split(brycen_file_path)
-        #brycen_file_name = brycen_file_path_split[1]
-
-        #billing_file_path = urllib.parse.unquote(matched_data.billing_file.url)
-        #billing_file_path_split = os.path.split(billing_file_path)
-        #billing_file_name = billing_file_path_split[1]
 
         context = super().get_context_data(**kwargs)
-
-        #if import_data.visually_matched_file:
-            #visually_matched_file_path = urllib.parse.unquote(import_data.visually_matched_file.url)
-            #visually_matched_file_path_split = os.path.split(visually_matched_file_path)
-            #visually_matched_file_name = visually_matched_file_path_split[1]
-            #context['visually_matched_file_name'] = visually_matched_file_name
-
         context['import_data'] = import_data
-        #context['import_data_file'] = urllib.parse.unquote(import_data.import_data_file.url)
         context['matched_data'] = matched_data
-        #context['matched_data_file_name'] = matched_data_file_name
-        #context['brycen_file_name'] = brycen_file_name
-        #context['billing_file_name'] = billing_file_name
         context['status'] = IMPORT_DATA_OUTPUT_COMPLETED
         return context
 
