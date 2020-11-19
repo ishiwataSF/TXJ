@@ -10,7 +10,7 @@ from django.views.generic import ListView, DetailView, CreateView, TemplateView
 from .models import Staff, Customer, GeneratedData, MatchedData, VisuallyMatchedData, ImportData
 from .forms import CustomerSelectAndFileUpLoadMultiFrom, VisuallyMatchedDataCreateForm, ImportDataCreateForm
 from datetime import datetime
-import openpyxl,  os, csv, codecs, chardet, urllib.parse, re, io
+import openpyxl,  os, csv, codecs, chardet, urllib.parse, re, io, math
 
 
 
@@ -87,18 +87,11 @@ class CustomerSelectAndFileUpLoadView(CreateView):
         print('brycen_file_path:{}'.format(brycen_file_path))
         print('billing_file_path:{}'.format(billing_file_path))
 
-        output = create_csv(brycen_file_path, billing_file_path)
-        output_data = output[0]
-        binary = output[1]
-        if binary == 'CP932':
-            output_data.encode('CP932')
-
-        print('output_data_binary', binary)
-
         # ファイル命名
         now = datetime.now()
         file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
 
+        output_data = create_csv(brycen_file_path, billing_file_path)
         # ファイルsave
         matched_data.matched_data_file.save(file_name, ContentFile(output_data))
 
@@ -162,6 +155,7 @@ def create_csv(f, f2):
     BILLING_AMOUNT_NUM = 45
     BILLING_TOTAL_NUM = 46
     BILLING_REMARK_NUM = 51
+    BILLING_SUBJECT_NUM = 8
 
     BRYCEN_STORE_CODE_LIST_INDEX = 0
     BRYCEN_PT_CODE_LIST_INDEX = 1
@@ -175,6 +169,7 @@ def create_csv(f, f2):
     hanTOLL = 'ﾄｰﾙ'
     otherTOLL = '九州産交'
 
+    print('##########csv_create start############')
     wb = openpyxl.load_workbook(f)
     ws = wb.active
     greatest = ws.max_row
@@ -209,7 +204,11 @@ def create_csv(f, f2):
     print('billing_file binary:',binary)
     if binary['encoding'] == 'CP932':
         print('encoding is CP932')
-        file = open(f2, encoding="shift-jis", errors='replace')
+        file = open(f2, encoding="CP932", errors='replace')
+
+    elif binary['encoding'] == 'SHIFT_JIS':
+        print('encoding is SHIFT_JIS')
+        file = open(f2, encoding='SHIFT_JIS', errors='replace')
     else:
         print('encoding is utf-8')
         file = open(f2, encoding="utf-8", errors='replace')
@@ -344,7 +343,7 @@ def create_csv(f, f2):
             if store_code == '未入力':
                 customer_code = '2493'
                 item_nam = '木パレット'
-                if '若松' in row[8]:
+                if '若松' in row[BILLING_SUBJECT_NUM]:
                     store_code = '63'
                     store_nam = '北九州支店'
                 else:
@@ -364,6 +363,7 @@ def create_csv(f, f2):
             # brycen_dataとbilling_listのstore_code、pt_code、unit_price、amount、totalが
             # 完全一致した行をbilling_dataからremove
             if billing_list == b:
+                print('remove{}:'.format(b))
                 # print('mach:' billing_list)
                 billing_data.remove(b)
 
@@ -371,13 +371,14 @@ def create_csv(f, f2):
         # writer_dataにappend
         if compare in billing_data:
             writer_data.append(all_billing_data)
+            print(all_billing_data)
 
     output = io.StringIO()
     header = ['取引先名', '支店番号', '支店名', '日付', '業者番号', '業者名', '商品コード', '品目', '単価', '数量', '単位', '合計金額', '備考']
     writer = csv.writer(output,  quoting=csv.QUOTE_NONNUMERIC)
     writer.writerow(header)
     writer.writerows(writer_data)
-    output_data = output.getvalue()
+    output_data = output.getvalue().encode('cp932')
 
     # TXJ以外の請求行（突合済ファイルに反映されない請求データ）をprintする。
     for pass_item in pass_data:
@@ -389,7 +390,7 @@ def create_csv(f, f2):
 
 
     #return file_path
-    return output_data, binary
+    return output_data
 
 
 class ImportDataCreateView(CreateView):
@@ -490,9 +491,10 @@ def import_data_create(f):
     UNIT_COL_NUM = 10
     TOTAL_COL_NUM = 11
 
+    print('#########import_data_create start#########')
     # 単位がtできた請求データをkgに変換する関数
     def kg_conversion():
-        kg = int(amount * 1000)
+        kg = math.ceil(amount * 1000) # <class 'int'>
         l[AMOUNT_LIST_INDEX] = kg
 
         kg_unit_price = int(total / kg)
@@ -510,9 +512,20 @@ def import_data_create(f):
 
     file_b = open(f, mode='rb')
     file_b_read = file_b.read()
-    print('visually_matched_file binary', chardet.detect(file_b_read))
+    binary = chardet.detect(file_b_read)
+    print('file binary', binary)
+    if binary['encoding'] == 'CP932':
+        print('encoding is CP932')
+        file = open(f, encoding="CP932", errors='replace')
 
-    file = open(f, encoding="utf8", errors='replace')  # csvファイルを読み込んだ内容をfileに入れる
+    elif binary['encoding'] == 'SHIFT_JIS':
+        print('encoding is SHIFT_JIS')
+        file = open(f, encoding="SHIFT_JIS", errors='replace')
+    else:
+        print('encoding is utf-8')
+        file = open(f, encoding="utf-8", errors='replace')
+
+    #file = open(f, encoding="utf8", errors='replace')  # csvファイルを読み込んだ内容をfileに入れる
     reader = csv.reader(file)  # csvファイルを開いて、開いた内容をreaderに入れる　
     data = list(reader)  # 開いた内容をリストで取得して、dataに入れる
 
@@ -522,7 +535,7 @@ def import_data_create(f):
         if n[PT_CODE_COL_NUM] == '10101' and n[UNIT_PRICE_COL_NUM] == '15':
             n_row_count += 1
 
-
+    #wb = openpyxl.load_workbook('/home/TXJProjects/media/import_data_format.xlsx')
     wb = openpyxl.load_workbook('/Users/ishiwata/PycharmProjects/Tool/media/import_data_format_file/import_data_format.xlsx')
     ws = wb.active
 
@@ -807,9 +820,10 @@ def import_data_create(f):
         else:
             # unit_code = '単位を確認してください'
             unit_code = ''
-
+            print(unit)
         l = [store_code, day, pt_code, unit_price, amount, unit, total, '', product_code, product_name, item_code,
              unit_code]
+        print(l)
 
         # TODO:イレギュラーPTを判定　→　特殊計算ロジック
         if pt_code == '03422':
@@ -885,6 +899,7 @@ def import_data_create(f):
                 l[REMARK_LIST_INDEX] = str(amount) + str(unit)
 
 
+
         ws.cell(column=1, row=i).value = l[STORE_CODE_LIST_INDEX]
         ws.cell(column=55, row=i).value = l[DAY_LIST_INDEX]
         ws.cell(column=68, row=i).value = l[PT_CODE_LIST_INDEX]
@@ -922,26 +937,8 @@ def import_data_create(f):
     # import_data_formatの6行目以降の不要行を削除
     ws.delete_rows(idx=row_count + 6, amount=max_row - (row_count + 6))  # idx= 何行目から　amount= 何行分削除するか
 
-    # ディレクトリ命名
-    #now = datetime.now()
-    #today = now.strftime('%Y/%m%d/')
-    #media_dir = settings.MEDIA_URL # media_dir: /media/
-
-    #dir_name = os.path.join(os.getcwd(), 'media', 'import_data_file', today)
-    # print('dir_name:{}'.format(dir_name))
-
-    #if not os.path.exists(dir_name):
-        #os.makedirs(dir_name, exist_ok=True)
-
-    # ファイル命名
-    #file_name = 'TXJ_import_data'+ now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分' + '.xlsx'
-    # print('filename1: {}'.format(file_name), )
-
-    #file_path = os.path.join(dir_name, file_name)
-    # print('file_path: {} '.format(file_path))
-
     output_data = openpyxl.writer.excel.save_virtual_workbook(wb)
-    #output_data = wb.save(file_name)
+
     return output_data
 
 

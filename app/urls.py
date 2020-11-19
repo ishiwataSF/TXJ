@@ -6,7 +6,7 @@ from .views import HistoryListView, ImportDataCreateView, ImportDataDetailView, 
 
 urlpatterns = [
     path('', LoginFormView.as_view(), name='login'),
-    path('top/', HistoryListView.as_view(), name='top'),
+    path('top/projects-histories/', HistoryListView.as_view(), name='top'),
     path('file_upload/', CustomerSelectAndFileUpLoadView.as_view(), name='file_upload'),
     path('matched_data/<int:pk>/detail_and_create',MatchedDataDetailAndVisuallyMatchedDataCreateView.as_view(), name='detail_and_create'),
     path('check_procedure/',MatchedDataCheckProcedureTmprateView.as_view(), name='check_procedure'),
