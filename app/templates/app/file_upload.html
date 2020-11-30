@@ -5,6 +5,8 @@
 
 <form method="POST" enctype="multipart/form-data">
 {% csrf_token %}
+
+    {{ formset }}
     <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
     <label>作成したいインポートデータの取引先を選択してください。</label>
     {{ form.generated_data.customer.label }}

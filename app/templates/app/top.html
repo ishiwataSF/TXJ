@@ -51,7 +51,7 @@
                         <td>{{ v.matched.generated.customer }}</td>
                         <td>{{ v.author}}</td>
                         <td>目視確認ファイル</td>
-                        <td><a href="{{ v.matched.matched_data_file.url }}" download="{ name }">{{ v.matched.matched_data_filename }}</a></td>
+                        <td><a href="{{ v.matched.matched_data_file.url }}" download="{{ name }}">{{ v.matched.matched_data_filename }}</a></td>
                         {% endif %}{% endfor %}
                     </tr>
                 </tbody>

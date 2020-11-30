@@ -13,6 +13,7 @@ class CustomerSelectForm(forms.ModelForm):
         widgets = {'customer': forms.Select(attrs={'class': 'customer-select-form'})}
 
 
+
 class UploadFileSelectForm(forms.ModelForm):
 
     class Meta:

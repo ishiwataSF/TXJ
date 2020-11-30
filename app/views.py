@@ -1,8 +1,9 @@
-from collections import OrderedDict
 from django.contrib.auth.views import LoginView
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.shortcuts import redirect
 from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse
@@ -35,7 +36,13 @@ class LoginFormView(SuccessMessageMixin, LoginView):
         return context
 
 
-class HistoryListView(ListView):
+from django.contrib.auth import logout as auth_logout
+
+def logout(request):
+    auth_logout(request)
+    return redirect(reverse('login'))
+
+class HistoryListView(LoginRequiredMixin, ListView):
     template_name = 'app/top.html'
 
     def get_queryset(self):
@@ -57,7 +64,7 @@ class HistoryListView(ListView):
 
         return context
 
-class CustomerSelectAndFileUpLoadView(CreateView):
+class CustomerSelectAndFileUpLoadView(LoginRequiredMixin, CreateView):
     form_class = CustomerSelectAndFileUpLoadMultiFrom
     template_name = 'app/file_upload.html'
 
@@ -101,7 +108,7 @@ class CustomerSelectAndFileUpLoadView(CreateView):
         matched = self.object['matched_data']
         return reverse('detail_and_create', kwargs={'pk': matched.id})
 
-class MatchedDataDetailAndVisuallyMatchedDataCreateView(DetailView, CreateView):
+class MatchedDataDetailAndVisuallyMatchedDataCreateView(LoginRequiredMixin, DetailView, CreateView):
     model = MatchedData
     form_class = VisuallyMatchedDataCreateForm
     template_name = 'app/detail_and_create.html'
@@ -239,11 +246,11 @@ def create_csv(f, f2):
                       '2493-123': '日向支店', '2493-124': '水俣支店', '2493-125': '姶良支店', '2493-126': '川内支店',
                       '2493-130': '安城支店', '2493-131': '名古屋支店', '2505-1': '千葉工場', '2505-2': '厚木工場', '2505-3': '浜松工場',
                       '2505-4': '中部工場', '2505-5': '四日市工場', '2505-6': '大阪工場', '2505-7': '東大阪工場', '2505-8': '西脇工場',
-                      '2505-11': '福山工場', '2505-13': '高松工場', '2505-15': '福岡工場', '2505-17': '中九州工場',
+                      '2505-11': '福山工場', '2505-13': '高松工場', '2505-14': '九州工場', '2505-15': '福岡工場', '2505-17': '中九州工場',
                       '2505-18': '熊本工場', '2505-19': '八代工場', '2508-9': '長崎センター', '2508-18': '宮崎センター',
                       '2508-19': '栗野食品センター',
                       '2508-20': '熊本センター', '2508-22': '福岡センター', '2508-23': '九州産交運輸　本社', '2508-29': '鹿児島センター',
-                      '2508-30': '佐賀事業所', '2508-32': '熊本コンテナセンター', '2508-33': '八代コンテナ事業所', '2508-34': '鹿児島センター',
+                      '2508-30': '佐賀事業所', '2508-32': '熊本コンテナセンター', '2508-33': '八代コンテナ事業所',
                       '2508-35': '福岡コンテナ事業所',
                       '2508-36': '北九州コンテナ事業所', '2508-37': '中九州センター'}
 
@@ -284,7 +291,7 @@ def create_csv(f, f2):
         remark = row[BILLING_REMARK_NUM]
 
         # トール以外の行をなるべく外す処理
-        if (zenTOLL not in store_nam and zenTOLL not in item_nam and zenTOLL not in remark and \
+        if ('0' not in remark) and (zenTOLL not in store_nam and zenTOLL not in item_nam and zenTOLL not in remark and \
             hanTOLL not in store_nam and hanTOLL not in item_nam and hanTOLL not in remark and \
             otherTOLL not in store_nam and otherTOLL not in item_nam and otherTOLL not in remark) and \
                 ('2493' not in store_code and '2493' not in remark and \
@@ -293,12 +300,13 @@ def create_csv(f, f2):
                 pass_data.append([store_code, store_nam, item_nam, remark, pt_code, pt_nam])
                 continue
 
-        # store_codeが無ければ(部門コード列空欄)、dictのkey(取引先コード-事業所コード)をいれる
+        # store_codeが無ければ(部門コード列空欄)、dictのkey(取引先コード-事業所コード)をいれるq
         if not store_code:
             for key, value in all_store_code.items():
+                print(store_nam)
                 # store_codeがない場合、store_nam/ramark/item_numに事業所名が一致するものがないか確認
-                if (store_nam is not None and value in store_nam) or (remark is not None and value in remark) or (
-                        item_nam is not None and value in item_nam):
+                if (store_nam is not None and value == store_nam) or (remark is not None and value == remark) or (
+                        item_nam is not None and value == item_nam):
                     store_code = str(key)
                     store_nam = value
                     break
@@ -388,12 +396,10 @@ def create_csv(f, f2):
             pass_item[0], pass_item[1], pass_item[2], pass_item[3], pass_item[4], pass_item[5])]
         print('pass_list:{}'.format(pass_list))
 
-
-    #return file_path
     return output_data
 
 
-class ImportDataCreateView(CreateView):
+class ImportDataCreateView(LoginRequiredMixin, CreateView):
     model = ImportData
     form_class = ImportDataCreateForm
     template_name = 'app/import_data.html'
@@ -508,6 +514,7 @@ def import_data_create(f):
         l[UNIT_PRICE_LIST_INDEX] = total
         l[AMOUNT_LIST_INDEX] = 1
         l[REMARK_LIST_INDEX] = str(unit_price) + '円' + '×' + '{:,}'.format(int(amount)) + 'kg'
+        l[REMARK_LIST_INDEX] = f'{unit_price}円 x {int(amount):,}kg'
         l[UNIT_CODE_LIST_INDEX] = '2'
 
     file_b = open(f, mode='rb')
@@ -535,8 +542,10 @@ def import_data_create(f):
         if n[PT_CODE_COL_NUM] == '10101' and n[UNIT_PRICE_COL_NUM] == '15':
             n_row_count += 1
 
+    xlsx_path = os.path.join(settings.MEDIA_ROOT, 'import_data_format.xlsx')
     #wb = openpyxl.load_workbook('/home/TXJProjects/media/import_data_format.xlsx')
-    wb = openpyxl.load_workbook('/Users/ishiwata/PycharmProjects/Tool/media/import_data_format_file/import_data_format.xlsx')
+    #wb = openpyxl.load_workbook('/Users/ishiwata/PycharmProjects/Tool/media/import_data_format_file/import_data_format.xlsx')
+    wb = openpyxl.load_workbook(xlsx_path)
     ws = wb.active
 
     current_dir = os.getcwd()
@@ -608,6 +617,11 @@ def import_data_create(f):
             product_name = '機密文書処理'
             # item_code = '対象コードがありません：品目を確認してください'
             item_code = ''
+
+        elif product_code == 123:
+            product_code = '0123'
+            product_name = '産業廃棄物（スポット  廃タイヤ）収集運搬処分費'
+            item_code = '13'
 
         elif product_code == 202:
             product_code = '0202'
@@ -701,6 +715,11 @@ def import_data_create(f):
                 product_name = '機密文書処理'
                 # item_code = '対象コードがありません：品目を確認してください'
                 item_code = ''
+
+            elif item == '廃タイヤ':
+                product_code = '0123'
+                product_name = '産業廃棄物（スポット  廃タイヤ）収集運搬処分費'
+                item_code = '13'
 
             elif item == 'マニフェスト':
                 product_code = '0202'
@@ -816,6 +835,24 @@ def import_data_create(f):
 
         elif unit == '枚':
             unit_code = '10'
+
+        elif unit == '本':
+            unit_code = '8'
+
+        elif unit == 'リットル':
+            unit_code = '9'
+
+        elif unit == 'm':
+            unit_code = '12'
+
+        elif unit == 'ｍ':
+            unit_code = '12'
+
+        elif unit == 'メートル':
+            unit_code = '12'
+
+        elif unit == '個':
+            unit_code = '13'
 
         else:
             # unit_code = '単位を確認してください'
@@ -942,7 +979,7 @@ def import_data_create(f):
     return output_data
 
 
-class MatchedDataCheckProcedureTmprateView(TemplateView):
+class MatchedDataCheckProcedureTmprateView(LoginRequiredMixin, TemplateView):
     template_name = 'app/check_procedure.html'
 
     def get_context_data(self, **kwargs):
@@ -951,7 +988,7 @@ class MatchedDataCheckProcedureTmprateView(TemplateView):
         return context
 
 
-class ImportDataDetailView(DetailView):
+class ImportDataDetailView(LoginRequiredMixin, DetailView):
     model = ImportData
     template_name = 'app/import_data_detail.html'
 
