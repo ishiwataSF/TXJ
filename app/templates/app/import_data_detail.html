@@ -21,7 +21,7 @@
       <table border="1"  width="720" cellspacing="0" cellpadding="5">
         <thead>
           <tr><th>アップロード日</th><td>{{ import_data.visually_matched.matched.created_date }}</td></tr>
-          <tr><th>担当者</th><td>{{ import_data.visually_matched.matched.author }}</td></tr>
+          <tr><th>担当者</th><td>{{ import_data.visually_matched.matched.staff }}</td></tr>
           <tr><th>契約データ</th><td><a href="{{ matched_data.brycen_file.url }}" download="{{ name }}">{{ matched_data.brycen_filename }}</a></td></tr>
           <tr><th>請求データ</th><td><a href="{{ matched_data.billing_file.url }}" download="{{ name }}">{{ matched_data.billing_filename }}</a></td></tr>
         </thead>
@@ -31,7 +31,7 @@
     <table border="1"  width="720" cellspacing="0" cellpadding="5">
         <thead>
           <tr><th>確認日</th><td>{{ import_data.visually_matched.created_date }}</td></tr>
-          <tr><th>担当者</th><td>{{ import_data.visually_matched.author }}</td></tr>
+          <tr><th>担当者</th><td>{{ import_data.visually_matched.staff }}</td></tr>
           <tr><th>確認ファイル</th><td><a href="{{ matched_data.matched_data_file.url }}" download="{{ name }}">{{ matched_data.matched_data_filename }}</a></td></tr>
         </thead>
     </table>
@@ -40,7 +40,7 @@
     <table border="1"  width="720" cellspacing="0" cellpadding="5">
         <thead>
           <tr><th>出力日</th><td>{{ import_data.created_date }}</td></tr>
-          <tr><th>担当者</th><td>{{ import_data.author }}</td></tr>
+          <tr><th>担当者</th><td>{{ import_data.staff }}</td></tr>
           {% if import_data.visually_matched_file %}
           <tr><th>アップロードファイル有無</th><td>あり</td></tr>
           <tr><th>アップロードファイル</th><td><a href="{{ import_data.visually_matched_file.url }}" download="{{ name }}">{{ import_data.visually_matched_filename }}</a></td></tr>

@@ -6,10 +6,10 @@ import os
 
 
 class Staff(models.Model):
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    staff = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
-        return str(self.author)
+        return str(self.staff)
 
 
 class Customer(models.Model):
@@ -21,7 +21,7 @@ class Customer(models.Model):
 
 class GeneratedData(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    author = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
     UPLOAD_NOT_COMPLETED = 0
     CSV_OUTPUT_COMPLETED = 1
     VISUALLY_CONFIRMED = 2
@@ -37,7 +37,7 @@ class GeneratedData(models.Model):
 
 class MatchedData(models.Model):
     generated = models.OneToOneField(GeneratedData, on_delete=models.CASCADE)
-    author = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
     created_date = models.DateTimeField(default=timezone.now)
     brycen_file = models.FileField(upload_to='brycen_file/%Y/%m%d/', validators=[FileExtensionValidator(['xlsx', ])]) # ブライセンの契約データExcelを保存したい
     billing_file = models.FileField(upload_to='billing_file/%Y/%m%d/', validators=[FileExtensionValidator(['csv', ])]) # 電子データCSVを保存したい
@@ -58,13 +58,13 @@ class MatchedData(models.Model):
 
 class VisuallyMatchedData(models.Model):
     matched = models.OneToOneField(MatchedData, on_delete=models.CASCADE)
-    author = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
     created_date = models.DateTimeField(default=timezone.now)
 
 
 class ImportData(models.Model):
     visually_matched = models.OneToOneField(VisuallyMatchedData, on_delete=models.CASCADE)
-    author = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
     created_date = models.DateTimeField(default=timezone.now)
     visually_matched_file = models.FileField(upload_to='visually_matched_file/%Y/%m%d/',
                                              validators=[FileExtensionValidator(['csv', ])], null=True,blank=True) # 突合済CSV修正ありなら、修正版CSVを保存したい。無い場合もあり。

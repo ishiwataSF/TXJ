@@ -11,7 +11,7 @@ from django.views.generic import ListView, DetailView, CreateView, TemplateView
 from .models import Staff, Customer, GeneratedData, MatchedData, VisuallyMatchedData, ImportData
 from .forms import CustomerSelectAndFileUpLoadMultiFrom, VisuallyMatchedDataCreateForm, ImportDataCreateForm
 from datetime import datetime
-import openpyxl,  os, csv, codecs, chardet, urllib.parse, re, io, math
+import openpyxl,  os, csv, codecs, chardet, urllib.parse, re, io, math, pprint
 
 
 
@@ -77,15 +77,15 @@ class CustomerSelectAndFileUpLoadView(LoginRequiredMixin, CreateView):
     @transaction.atomic
     def form_valid(self, form):
         generated_data = form['generated_data'].save(commit=False)
-        author = Staff.objects.get(author=self.request.user)
-        generated_data.author = author
+        staff = Staff.objects.get(staff=self.request.user)
+        generated_data.staff = staff
         generated_data.status = UPLOAD_NOT_COMPLETED
         generated_data.save()
 
         matched_data = form['matched_data'].save(commit=False)
         matched_data.generated = generated_data
-        author = Staff.objects.get(author=self.request.user)
-        matched_data.author = author
+        staff = Staff.objects.get(staff=self.request.user)
+        matched_data.staff = staff
         matched_data.generated.status = CSV_OUTPUT_COMPLETED
         matched_data.save()
 
@@ -99,6 +99,7 @@ class CustomerSelectAndFileUpLoadView(LoginRequiredMixin, CreateView):
         file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
 
         output_data = create_csv(brycen_file_path, billing_file_path)
+
         # ファイルsave
         matched_data.matched_data_file.save(file_name, ContentFile(output_data))
 
@@ -124,8 +125,8 @@ class MatchedDataDetailAndVisuallyMatchedDataCreateView(LoginRequiredMixin, Deta
 
     def form_valid(self, form):
         visually_matched = form.save(commit=False)
-        author = Staff.objects.get(author=self.request.user)
-        visually_matched.author = author
+        staff = Staff.objects.get(staff=self.request.user)
+        visually_matched.staff = staff
         matched_data_pk = self.kwargs['pk']
         matched = MatchedData.objects.get(pk=matched_data_pk)
         visually_matched.matched_id = matched.id
@@ -149,6 +150,8 @@ def create_csv(f, f2):
     BRYCEN_UNIT_PRICE_NUM = 4
     BRYCEN_AMOUNT_NUM = 5
     BRYCEN_TOTAL_NUM = 7
+    BRYCEN_CONTRACT_START_DATE_NUM = 9
+    BRYCEN_CONTRACT_END_DATE_NUM = 13
 
     BILLING_STORE_CODE_NUM = 49
     BILLING_STORE_NAM_NUM = 50
@@ -182,8 +185,10 @@ def create_csv(f, f2):
     greatest = ws.max_row
 
     # 契約データの必要情報を取得する
-    brycen_data = []
-    for row in ws.iter_rows(min_col=6, max_row=greatest + 1, max_col=15):
+    monthly_fixed_cost_list = []
+    spot_cost_list = []
+    row_count = 0
+    for row in ws.iter_rows(min_col=6, max_row=greatest + 1):
         if row[0].value:
             store = row[BRYCEN_STORE_CODE_NUM].value
             store_split = store.split(':')
@@ -202,22 +207,45 @@ def create_csv(f, f2):
             total = row[BRYCEN_TOTAL_NUM].value
             total = int(total.replace(',', ''))
 
-            brycen_list = [store_code, pt_code, unit_price, amount, total]
-            brycen_data.append(brycen_list)
+
+            contract_start_date = row[BRYCEN_CONTRACT_START_DATE_NUM].value
+            contract_end_date = row[BRYCEN_CONTRACT_END_DATE_NUM].value
+
+            # 契約終了日が空欄だったら
+            if contract_end_date is None:
+                row_count += 1
+                monthly_fixed_cost = [contract_start_date, store_code, pt_code, unit_price, amount, total]
+                monthly_fixed_cost_list.append(monthly_fixed_cost)
+
+            # 契約終了日に日付が入っていたら
+            elif contract_end_date:
+                row_count += 1
+                spot_cost = [contract_start_date, store_code, pt_code, unit_price, amount, total]
+                spot_cost_list.append(spot_cost)
+
+            else:
+                other_list = [contract_start_date, contract_end_date, store_code, pt_code, unit_price, amount, total]
+                print(f'other_list:{other_list}')
+                #break
+
+            # 現行スクリプト
+            # brycen_list = [store_code, pt_code, unit_price, amount, total]
+            # brycen_data.append(brycen_list)
 
     file_b = open(f2, mode='rb')
     file_b_read = file_b.read()
     binary = chardet.detect(file_b_read)
     print('billing_file binary:',binary)
+    encoding = binary['encoding']
     if binary['encoding'] == 'CP932':
-        print('encoding is CP932')
+        print(f'encoding is {encoding}')
         file = open(f2, encoding="CP932", errors='replace')
 
     elif binary['encoding'] == 'SHIFT_JIS':
-        print('encoding is SHIFT_JIS')
+        print(f'encoding is {encoding}')
         file = open(f2, encoding='SHIFT_JIS', errors='replace')
     else:
-        print('encoding is utf-8')
+        print(f'encoding is {encoding}')
         file = open(f2, encoding="utf-8", errors='replace')
     reader = csv.reader(file)
     data = list(reader)
@@ -281,8 +309,7 @@ def create_csv(f, f2):
         store_code = row[BILLING_STORE_CODE_NUM]
 
         store_nam = row[BILLING_STORE_NAM_NUM]
-        day = row[BILLING_DAY_NUM]
-        # print(day)
+        billing_date = row[BILLING_DAY_NUM]
         pt_code = int(row[BILLING_PT_CODE_NUM])
         pt_nam = row[BILLING_PT_NAM_NUM]
         item_nam = row[BILLING_ITEM_NAM_NUM]
@@ -291,20 +318,22 @@ def create_csv(f, f2):
         remark = row[BILLING_REMARK_NUM]
 
         # トール以外の行をなるべく外す処理
+        # 1.備考欄に0がある 2.部門名or備考欄に「トールorﾄｰﾙor九州産交」が含まれる 3.部門コードor備考欄に取引先コードが含まれる
+        # 4.部門名に値がある　1~4に当てはまればpassされない
         if ('0' not in remark) and (zenTOLL not in store_nam and zenTOLL not in item_nam and zenTOLL not in remark and \
-            hanTOLL not in store_nam and hanTOLL not in item_nam and hanTOLL not in remark and \
-            otherTOLL not in store_nam and otherTOLL not in item_nam and otherTOLL not in remark) and \
-                ('2493' not in store_code and '2493' not in remark and \
+            hanTOLL not in store_nam and hanTOLL not in item_nam and hanTOLL not in remark and
+            otherTOLL not in store_nam and otherTOLL not in item_nam and otherTOLL not in remark ) and \
+                ('2493' not in store_code and '2493' not in remark and not store_nam and
                  '2505' not in store_code and '2505' not in remark and '2508' not in store_code and '2508' not in remark):
-            if int(pt_code) not in [1023, 1100, 2857, 2877, 3350, 3353, 3370, 3381, 3422, 3443, 3742, 3761, 5145, 5172]:
+            # 1~4に当てはまらなくても下記pt_codeの請求行はpassされない
+            if int(pt_code) not in [1023, 1100, 2857, 2877, 3350, 3361, 3376, 3353, 3370, 3381, 3422, 3443, 3742, 3761, 5145, 5172]:
                 pass_data.append([store_code, store_nam, item_nam, remark, pt_code, pt_nam])
                 continue
 
-        # store_codeが無ければ(部門コード列空欄)、dictのkey(取引先コード-事業所コード)をいれるq
+        # store_codeが無ければ(部門コード列空欄)、dictのkey(取引先コード-事業所コード)をいれる
         if not store_code:
             for key, value in all_store_code.items():
-                print(store_nam)
-                # store_codeがない場合、store_nam/ramark/item_numに事業所名が一致するものがないか確認
+                # store_codeがない場合、store_nam or remark or item_numに事業所名が一致するものがないか確認
                 if (store_nam is not None and value == store_nam) or (remark is not None and value == remark) or (
                         item_nam is not None and value == item_nam):
                     store_code = str(key)
@@ -314,11 +343,9 @@ def create_csv(f, f2):
         # store_codeはある前提。if not store_code:〜store_code = str(key)の間で条件一致していれば、store_codeは空にならない
         # dictに一致しないということは、そもそもトール関連の請求ではない可能性が高い
         if store_code:
-            # print(store_code)
             if not store_nam:
                 for key, value in all_store_code.items():
                     if store_code in key:
-                        # store_code = str(key)  ←ここはここと同じことしてるかも？→if not store_code:〜store_code = str(key)
                         store_nam = value
                         break
 
@@ -329,7 +356,6 @@ def create_csv(f, f2):
             if not customer_mach:
                 customer_code = store_split[0]
                 store_code = int(store_split[1])
-                # print('if not:', store_split[0], store_code)
 
             else:
                 customer_code = store_split[0]
@@ -358,28 +384,68 @@ def create_csv(f, f2):
                     store_code = '34'
                     store_nam = '京都支店'
 
-        billing_list = [store_code, pt_code, unit_price, amount, total]
+        billing_list = [billing_date, store_code, pt_code, unit_price, amount, total]
         billing_data.append(billing_list)
 
-        all_billing_data = [customer_code, store_code, store_nam, day, pt_code, pt_nam, item_code, item_nam,
+
+        all_billing_data = [customer_code, store_code, store_nam, billing_date, pt_code, pt_nam, item_code, item_nam,
                             unit_price, amount, unit, total, remark]
 
-        compare = [all_billing_data[1], all_billing_data[4], all_billing_data[8], all_billing_data[9],
-                   all_billing_data[11]]
+        STORE_CODE_NUM = 1
+        BILLING_DATE_NUM = 3
+        PT_CODE_NUM = 4
+        UNIT_PRICE_NUM = 8
+        AMONT_NUM = 9
+        TOTAL_NUM = 11
 
-        for b in brycen_data:
+        # compare = [all_billing_data[1], all_billing_data[4], all_billing_data[8], all_billing_data[9],
+                   #all_billing_data[11]]
+        compare = [all_billing_data[BILLING_DATE_NUM], all_billing_data[STORE_CODE_NUM], all_billing_data[PT_CODE_NUM], all_billing_data[UNIT_PRICE_NUM],
+                   all_billing_data[AMONT_NUM], all_billing_data[TOTAL_NUM]]
+
+        # billing_list = [billing_date, store_code, pt_code, unit_price, amount, total]
+        # print(billing_list)
+
+        # for b in brycen_data:
+        for b in billing_data:
+            for m in monthly_fixed_cost_list:
+                #print(f'billing_data:{b[1:]}')
+                #print(f'billing_data:{b[1:]} monthly:{m[1:]}')
+
             # brycen_dataとbilling_listのstore_code、pt_code、unit_price、amount、totalが
             # 完全一致した行をbilling_dataからremove
-            if billing_list == b:
-                print('remove{}:'.format(b))
-                # print('mach:' billing_list)
-                billing_data.remove(b)
+                if b[1:] == m[1:]:
+                #print(f'billing_data:{billing_data}')
+                    print(f'monthly_cost billing_data match row:{b}')
+                    billing_data.remove(b)
 
-        # brycen_dataとbilling_dataが不一致だった場合のみ
-        # writer_dataにappend
+            for s in spot_cost_list:
+                if b == s:
+                    print(f'spot_cost billing_data match row:{s}')
+                    billing_data.remove(s)
+                    # print(f'remove spot:{billing_data}')
+
+            # 現行スクリプト
+            # if billing_list == b:
+                # print('remove{}:'.format(b))
+                # print('mach:',billing_list)
+                # billing_data.remove(b)
+                # print('remove')
+                #billing_data_day.remove(b)
+
+        # billing_dataのままだとcustomer_code等の情報が欠けている。欠けている情報を補う処理
+        # 大元の請求データ(all_billing_data)を元にbilling_data比較用のリストがcompare
+        # compareにbilling_dataが含まれる場合は、writer_data.append
         if compare in billing_data:
             writer_data.append(all_billing_data)
-            print(all_billing_data)
+            # print(f'all_billing_data:{all_billing_data}')
+
+        # 現行スクリプト
+        # brycen_dataとbilling_dataが不一致だった場合のみ
+        # writer_dataにappend
+        #if compare in billing_data:
+            # writer_data.append(all_billing_data)
+            # print(all_billing_data)
 
     output = io.StringIO()
     header = ['取引先名', '支店番号', '支店名', '日付', '業者番号', '業者名', '商品コード', '品目', '単価', '数量', '単位', '合計金額', '備考']
@@ -392,11 +458,13 @@ def create_csv(f, f2):
     for pass_item in pass_data:
         #print(
         #'============= Pass \n store: {} {} \n item_remark : {}_{} \n pt    :{} {} ============'.format(
-        pass_list = ['============= Pass \n store: {} {} \n item_remark : {}_{} \n pt    :{} {} ============'.format(
-            pass_item[0], pass_item[1], pass_item[2], pass_item[3], pass_item[4], pass_item[5])]
-        print('pass_list:{}'.format(pass_list))
+        #pass_list = ['============= Pass \n store: {} {} \n item_remark : {}_{} \n pt    :{} {} ============'.format(
+        pass_list = [f'store:{pass_item[0]} {pass_item[1]}, item:{pass_item[2]}, remark:{pass_item[3]}, '
+                     f'pt:{pass_item[4]} {pass_item[5]}']
+
 
     return output_data
+    #return output_data, pass_items
 
 
 class ImportDataCreateView(LoginRequiredMixin, CreateView):
@@ -434,8 +502,8 @@ class ImportDataCreateView(LoginRequiredMixin, CreateView):
 
         if 'upload_and_create' in self.request.POST:
             import_data = form.save(commit=False)
-            author = Staff.objects.get(author=self.request.user)
-            import_data.author = author
+            staff = Staff.objects.get(staff=self.request.user)
+            import_data.staff = staff
             visually_matched_data_pk = self.kwargs['pk']
             visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
             import_data.visually_matched_id = visually_matched.id
@@ -449,8 +517,8 @@ class ImportDataCreateView(LoginRequiredMixin, CreateView):
 
         elif 'create' in self.request.POST:
             import_data = form.save(commit=False)
-            author = Staff.objects.get(author=self.request.user)
-            import_data.author = author
+            staff = Staff.objects.get(staff=self.request.user)
+            import_data.staff = staff
             visually_matched_data_pk = self.kwargs['pk']
             visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
             import_data.visually_matched_id = visually_matched.id
@@ -543,8 +611,6 @@ def import_data_create(f):
             n_row_count += 1
 
     xlsx_path = os.path.join(settings.MEDIA_ROOT, 'import_data_format.xlsx')
-    #wb = openpyxl.load_workbook('/home/TXJProjects/media/import_data_format.xlsx')
-    #wb = openpyxl.load_workbook('/Users/ishiwata/PycharmProjects/Tool/media/import_data_format_file/import_data_format.xlsx')
     wb = openpyxl.load_workbook(xlsx_path)
     ws = wb.active
 
@@ -563,15 +629,12 @@ def import_data_create(f):
             continue
         store_code = str(store_code.rjust(5, '0'))
 
-        # print(row[DAY_COL_NUM])
         match = re.search(r'(\d{4})/(\d+)/(\d+)', str(row[DAY_COL_NUM]))
         year = int(match.group(1))
         month = int(match.group(2))
         date = int(match.group(3))
         conv_date = datetime(year, month, date) - datetime(1899, 12, 30)
         day = int(conv_date.days)
-
-        # day = dt.strptime(row[DAY_COL_NUM], '%Y-%m-%d %H:%M:%S')  # %Y-%m-%d %H:%M:%S
         pt_code = str(row[PT_CODE_COL_NUM].rjust(5, '0'))
 
         amount = row[AMOUNT_COL_NUM]
@@ -978,14 +1041,6 @@ def import_data_create(f):
 
     return output_data
 
-
-class MatchedDataCheckProcedureTmprateView(LoginRequiredMixin, TemplateView):
-    template_name = 'app/check_procedure.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page'] = 'CHECK'
-        return context
 
 
 class ImportDataDetailView(LoginRequiredMixin, DetailView):

@@ -37,7 +37,7 @@
                         <td><a href="{%url 'detail_and_create' pk=m.pk %}">{{ m.created_date|date:"Y/n/j H:i" }}</a></td>
                         <td>CSV出力済</td>
                         <td>{{ m.generated.customer }}</td>
-                        <td>{{ m.author}}</td>
+                        <td>{{ m.staff}}</td>
                         <td>請求データ</td>
                         <td><a href="{{ m.billing_file.url }}">{{ m.billing_filename }}</a></td>
                         {% endif %}{% endfor %}
@@ -49,7 +49,7 @@
                         <td><a href="{%url 'import_data' pk=v.pk %}">{{ v.created_date|date:"Y/n/j H:i" }}</a></td>
                         <td>目視確認済</td>
                         <td>{{ v.matched.generated.customer }}</td>
-                        <td>{{ v.author}}</td>
+                        <td>{{ v.staff}}</td>
                         <td>目視確認ファイル</td>
                         <td><a href="{{ v.matched.matched_data_file.url }}" download="{{ name }}">{{ v.matched.matched_data_filename }}</a></td>
                         {% endif %}{% endfor %}
@@ -64,7 +64,7 @@
                     <tr>
                         <th>NO.</th>
                         <th data-field="export-date" data-filter-control="input">インポートデータ出力日</th>
-                        <th data-field="author" data-filter-control="select">担当者</th>
+                        <th data-field="staff" data-filter-control="select">担当者</th>
                         <th data-field="customer" data-filter-control="select">取引先</th>
                         <th data-field="billing-data" data-filter-control="input">請求データ</th>
                         <th data-field="csv-type" data-filter-control="select">CSV修正有無</th>
@@ -76,7 +76,7 @@
                     <tr>
                         <td>{{ i.visually_matched.matched.generated.pk }}</td>
                         <td><a href="{% url 'import_data_detail' pk=i.pk %}">{{ i.created_date|date:"Y/n/j H:i" }}</a></td>
-                        <td>{{ i.author }}</td>
+                        <td>{{ i.staff }}</td>
                         <td>{{ i.visually_matched.matched.generated.customer }}</td>
                         <td><a href="{{ i.visually_matched.matched.billing_file.url }}">{{ i.visually_matched.matched.billing_filename }}</a></td>
                         {% if i.visually_matched_file %}
