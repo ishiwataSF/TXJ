@@ -3,6 +3,7 @@
 {% block content %}
 
 <div class="page-body" style="margin: auto; padding: 20px 20px 20px 30px;">
+    <a href="{% url 'customer_brycen_file_select' %}" type="button" class="btn btn-outline-primary">入力フォーム</a><br><br>
     <a href="{% url 'file_upload' %}" type="button" class="btn btn-outline-primary">新規案件を進める</a><br><br>
     <ul class="nav nav-tabs" id="myTab" role="tablist">
       <li class="nav-item">
@@ -39,9 +40,11 @@
                         <td>{{ m.generated.customer }}</td>
                         <td>{{ m.staff}}</td>
                         <td>請求データ</td>
-                        <td><a href="{{ m.billing_file.url }}">{{ m.billing_filename }}</a></td>
-                        {% endif %}{% endfor %}
+                        {% if m.billing_file %}
+                        <td><a href="{{ m.billing_file.url }}">{{ m.billing_filename }}</a></td>{% endif %}
+                        {% endif %}
                     </tr>
+                {% endfor %}
                 {% for v in visually_matched %}
                 {% if v.matched.generated.status is 2 %}
                     <tr>
@@ -52,8 +55,9 @@
                         <td>{{ v.staff}}</td>
                         <td>目視確認ファイル</td>
                         <td><a href="{{ v.matched.matched_data_file.url }}" download="{{ name }}">{{ v.matched.matched_data_filename }}</a></td>
-                        {% endif %}{% endfor %}
+                        {% endif %}
                     </tr>
+                {% endfor %}
                 </tbody>
             </table>
       </div>

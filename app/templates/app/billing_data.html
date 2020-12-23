@@ -1,0 +1,123 @@
+
+{% extends 'app/base.html' %}
+
+{% block content %}
+<h5>取引先名:{{ generated.customer }}</h5>
+<h4>案件NO.{{　generated.pk}}</h4><br>
+{% comment %}<form method="POST" class="post-form">{% endcomment %}
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <table class="table table-sm table-hover" id="incompleteTable"
+           cellspacing="0" cellpadding="5"
+           data-filter-control="true" data-show-search-clear-button="true">
+
+        <thead class="thead-light">
+            <tr>
+                <th>請求日</th>
+                <th>業者</th>
+                <th>事業所</th>
+                <th>商品</th>
+                <th>品目</th>
+                <th>数量</th>
+                <th>単位</th>
+                <th>単価</th>
+                <th>合計</th>
+            </tr>
+        </thead>
+        {{ formset.management_form }}
+        <tbody id="form">
+            {% for form in formset %}
+                <tr>
+                    <td>{{ form.id }}{{ form.billing_date }}</td>
+                    <td>{{ form.agent }}</td>
+                    <td>{{ form.place }}</td>
+                    <td>{{ form.product }}</td>
+                    <td>{{ form.item }}</td>
+                    <td>{{ form.amount }}</td>
+                    <td>{{ form.unit }}</td>
+                    <td>{{ form.unit_price }}</td>
+                    <td>{{ form.total }}</td>
+                    <td class="delete-btn">{{ form.DELETE }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <td><h3><span id="add_button" class="badge badge-light" style="font-weight: 100;">行追加</span></h3></td>
+    </table>
+    <button name="save" type="submit" class="btn btn-outline-primary">一時保存</button>
+    <button name="save_and_create" class="btn btn-outline-primary">save</button>
+</form>
+<template id="empty_form">
+    <tr>
+        <td>{{ formset.empty_form.id }}{{ formset.empty_form.billing_date }}</td>
+        <td>{{ formset.empty_form.agent }}</td>
+        <td>{{ formset.empty_form.place }}</td>
+        <td>{{ formset.empty_form.product }}</td>
+        <td>{{ formset.empty_form.item }}</td>
+        <td>{{ formset.empty_form.amount }}</td>
+        <td>{{ formset.empty_form.unit }}</td>
+        <td>{{ formset.empty_form.unit_price }}</td>
+        <td>{{ formset.empty_form.total }}</td>
+        <td class="delete-btn">{{ formset.empty_form.DELETE}}</td>
+    </tr>
+</template>
+
+
+{% block extrajs %}
+<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+{% endblock %}
+
+<script>
+    $(function() {
+        $('#add_button').click(function() {
+            var formIdx = $('#id_form-TOTAL_FORMS').val();
+            const $form = $('#form');
+
+            const $newForm = $($('#empty_form').html().replace(/__prefix__/g, formIdx));
+            $form.append($newForm);
+            $('#id_form-TOTAL_FORMS').val(parseInt(formIdx) + 1);
+            $('.delete-btn').css({'display': 'block'});
+
+                //追加された行を非表示にする処理
+                $('.delete-btn').children('input').on('change', function(e) {
+                    $(this).parents('tr').css({'display': 'none'});
+                    $(this).parents('tr').attr('class', 'count');
+                    var Judgment = $('#id_form-TOTAL_FORMS').val() - $('.count').length;
+                    if(Judgment == 1) {
+                        $('.delete-btn').css({'display': 'none'});
+                    };
+                });
+        });
+
+        //既存の行を非表示にする処理
+        $('.delete-btn').children('input').on('change', function(e) {
+            $(this).parents('tr').css({'display': 'none'});
+            $(this).parents('tr').attr('class', 'count');
+            var Judgment = $('#id_form-TOTAL_FORMS').val() - $('.count').length;
+            if(Judgment == 1) {
+                $('.delete-btn').css({'display': 'none'});
+            };
+        });
+
+        $('#form').on('change', '.billing-data-amount-form', function(e) {
+            e.preventDefault();
+            const $tr = $(this).parents('tr');
+            const $totalElm = $('.billing-data-total-form', $tr);
+            const $unitPriceElm = $('.billing-data-unit_price-form', $tr);
+            if($unitPriceElm.val()){
+                $totalElm.val(Math.ceil($unitPriceElm.val() * $(this).val()));
+            };
+        });
+
+        $('#form').on('change', '.billing-data-unit_price-form', function(e) {
+            e.preventDefault();
+            const $tr = $(this).parents('tr');
+            const $totalElm = $('.billing-data-total-form', $tr);
+            const $amountElm = $('.billing-data-amount-form', $tr);
+            if($amountElm.val()){
+                $totalElm.val(Math.ceil($amountElm.val() * $(this).val()));
+            };
+        });
+    });
+</script>
+
+{% endblock %}

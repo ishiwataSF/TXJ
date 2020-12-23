@@ -1,0 +1,17 @@
+
+{% extends 'app/base.html' %}
+
+{% block content %}
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
+        <label>電子データを選択してください</label>
+        {{ form.billing_file }}
+    </div>
+    <div class="select-button"><button type="submit" class="btn btn-outline-primary">upload</button></div>
+    ※uploadを押すと選択したファイルを基に付け合わせ済ファイルを作成します。
+</form>
+
+<a href="{% url 'billing_data_create' pk=matched.id %}">Billing_data入力フォーム</a>
+
+{% endblock %}

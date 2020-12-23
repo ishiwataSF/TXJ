@@ -64,3 +64,23 @@ li {
 .customer-select-form{
     margin-right: 420px;
     }
+.billing-data-date-form{
+    width: 10.5rem;
+    }
+
+.billing-data-amount-form, .billing-data-unit_price-form, .billing-data-total-form{
+    width: 7rem;
+    }
+
+.billing-agent-form {
+    width: 13rem;
+    }
+
+.billing-product-form{
+    width: 13rem;
+    }
+
+.billing-place-form{
+    width: 9rem;
+    }
+    

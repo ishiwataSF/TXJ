@@ -1,0 +1,106 @@
+{% extends 'app/base.html' %}
+
+{% block content %}
+
+
+<h5>取引先名:{{ matched.generated.customer }}</h5>
+<h4>案件NO.{{　matched.generated.pk}}</h4><br>
+
+<a href="{% url 'billing_data_edit' matched_data_pk=matched_data_pk billing_data_last_row_pk=billing_data_pk %}">編集</a>
+
+<table class="table table-sm table-hover" id="incompleteTable"
+       cellspacing="0" cellpadding="5"
+       data-filter-control="true" data-show-search-clear-button="true">
+
+    <thead class="thead-light">
+        <tr>
+            <th>請求日</th>
+            <th>業者</th>
+            <th>事業所</th>
+            <th>商品</th>
+            <th>品目</th>
+            <th>数量</th>
+            <th>単位</th>
+            <th>単価</th>
+            <th>合計</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for billing_data in billing %}
+
+        <tr>
+            <td>{{ billing_data.billing_date }}</td>
+            <td>{{ billing_data.agent }}</td>
+            <td>{{ billing_data.place }}</td>
+            <td>{{ billing_data.product }}</td>
+            {% if billing_data.item == billing_data.WOOD_PALLET_ITEM_NUM %}
+            <td>木パレット</td>
+            {% elif billing_data.item == billing_data.CONTAINER_REPLACEMENT_ITEM_NUM %}
+            <td>コンテナ交換</td>
+            {% elif billing_data.item == billing_data.CONTAINER_RENTAL_ITEM_NUM %}
+            <td>コンテナレンタル代</td>
+            {% elif billing_data.item == billing_data.STRETCH_FILM_ITEM_NUM %}
+            <td>ストレッチフィルム</td>
+            {% elif billing_data.item == billing_data.SLUDGES_ITEM_NUM %}
+            <td>汚泥</td>
+            {% elif billing_data.item == billing_data.SCRAP_ITEM_NUM %}
+            <td>スクラップ類</td>
+            {% elif billing_data.item == billing_data.GENERAL_WASTE_ITEM_NUM %}
+            <td>一般廃棄物</td>
+            {% elif billing_data.item == billing_data.INDUSTRIAL_WASTE_ITEM_NUM %}
+            <td>産業廃棄物</td>
+            {% elif billing_data.item == billing_data.MANIFEST_ITEM_NUM %}
+            <td>マニフェスト</td>
+            {% elif billing_data.item == billing_data.WASTE_ELEMENT_ITEM_NUM %}
+            <td>廃エレメント</td>
+            {% elif billing_data.item == billing_data.WASTE_TIRE_ITEM_NUM %}
+            <td>廃タイヤ</td>
+            {% elif billing_data.item == billing_data.BASE_TIRE_ITEM_NUM %}
+            <td>台タイヤ</td>
+            {% elif billing_data.item == billing_data.WASTE_COOLANT_ITEM_NUM %}
+            <td>廃クーラント</td>
+            {% elif billing_data.item == billing_data.WASTE_OIL_ITEM_NUM %}
+            <td>廃油</td>
+            {% elif billing_data.item == billing_data.INDUSTRIAL_WASTE_TAX_ITEM_NUM %}
+            <td>産廃税</td>
+            {% elif billing_data.item == billing_data.WASTE_BATTERY_ITEM_NUM %}
+            <td>廃バッテリー</td>
+            {% endif %}
+            <td>{{ billing_data.amount }}</td>
+            {% if billing_data.unit == billing_data.KG_UNIT_NUM %}
+            <td>kg</td>
+            {% elif billing_data.unit == billing_data.CAR_UNIT_NUM %}
+            <td>車</td>
+            {% elif billing_data.unit == billing_data.ONESET_UNIT_NUM %}
+            <td>式</td>
+            {% elif billing_data.unit == billing_data.MONTHLY_UNIT_NUM %}
+            <td>月額</td>
+            {% elif billing_data.unit == billing_data.CUBIC_METER_UNIT_NUM %}
+            <td>立米</td>
+            {% elif billing_data.unit == billing_data.TIMES_UNIT_NUM %}
+            <td>回</td>
+            {% elif billing_data.unit == billing_data.CASE_UNIT_NUM %}
+            <td>ケース</td>
+            {% elif billing_data.unit == billing_data.PEDESTAL_UNIT_NUM %}
+            <td>台</td>
+            {% elif billing_data.unit == billing_data.TIRE_UNIT_NUM %}
+            <td>本</td>
+            {% elif billing_data.unit == billing_data.LITER_UNIT_NUM %}
+            <td>リットル</td>
+            {% elif billing_data.unit == billing_data.SHEET_UNIT_NUM %}
+            <td>枚</td>
+            {% elif billing_data.unit == billing_data.METER_UNIT_NUM %}
+            <td>メートル</td>
+            {% elif billing_data.unit == billing_data.QUANTITY_UNIT_NUM %}
+            <td>個</td>
+            {% endif %}
+            <td>{{ billing_data.unit_price }}</td>
+            <td>{{ billing_data.total }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+
+{% endblock %}

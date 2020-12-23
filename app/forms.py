@@ -1,7 +1,8 @@
 from betterforms.multiform import MultiModelForm
 from django import forms
+from django.forms import modelformset_factory
 from django.core.exceptions import ValidationError
-from .models import GeneratedData, MatchedData, VisuallyMatchedData, ImportData
+from .models import GeneratedData, MatchedData, VisuallyMatchedData, ImportData, BillingData, Place
 
 
 class CustomerSelectForm(forms.ModelForm):
@@ -11,7 +12,6 @@ class CustomerSelectForm(forms.ModelForm):
         fields = ('customer', )
         labels = {'customer': '取引先選択'}
         widgets = {'customer': forms.Select(attrs={'class': 'customer-select-form'})}
-
 
 
 class UploadFileSelectForm(forms.ModelForm):
@@ -24,6 +24,13 @@ class UploadFileSelectForm(forms.ModelForm):
         widgets = {'brycen_file': forms.FileInput(attrs={'accept': '.xlsx'}),
                    'billing_file': forms.FileInput(attrs={'accept': '.csv'})}
 
+class BiilingFileUploadFrom(forms.ModelForm):
+    class Meta:
+        model = MatchedData
+        fields = ('billing_file', )
+        widgets = {'billing_file': forms.FileInput(attrs={'accept': '.csv'})}
+
+
 class VisuallyMatchedDataCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -33,6 +40,7 @@ class VisuallyMatchedDataCreateForm(forms.ModelForm):
     class Meta:
         model = VisuallyMatchedData
         fields = ('created_date', )
+
 
 class ImportDataCreateForm(forms.ModelForm):
     def __init__(self, *args, method='GET', upload_and_create=False, **kwargs):
@@ -84,6 +92,35 @@ class CustomerSelectAndFileUpLoadMultiFrom(MultiModelForm):
             matched_data.save()
 
             return objects
+
+
+class BillingDataFrom(forms.ModelForm):
+
+    def __init__(self, queryset=None, customer_id=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if customer_id:
+            self.fields['place'].queryset = Place.objects.filter(customer_id=customer_id)
+
+    class Meta:
+        model = BillingData
+        fields = ('billing_date', 'agent', 'product', 'place', 'item', 'amount', 'unit', 'unit_price', 'total', )
+        widgets = {'billing_date': forms.TextInput(attrs={'class': 'billing-data-date-form form-control','type': 'date'}),
+                   'amount': forms.NumberInput(attrs={'class': 'billing-data-amount-form form-control'}),
+                   'unit_price': forms.NumberInput(attrs={'class': 'billing-data-unit_price-form form-control'}),
+                   'total': forms.NumberInput(attrs={'class': 'billing-data-total-form form-control'}),
+                   'agent': forms.widgets.Select(attrs={'class': 'billing-agent-form form-control'}),
+                   'product': forms.Select(attrs={'class': 'billing-product-form form-control'}),
+                   'place': forms.Select(attrs={'class': 'billing-place-form form-control'}),
+                   'item': forms.Select(attrs={'class': 'form-control'}),
+                   'unit': forms.Select(attrs={'class': 'form-control'})}
+
+
+
+
+BillingDataFromSet = modelformset_factory(
+    BillingData, form=BillingDataFrom, exclude=('create_date', 'staff', ), extra=1, can_delete=True)
+
+
 
 
 
