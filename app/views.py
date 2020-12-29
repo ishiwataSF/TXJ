@@ -16,7 +16,6 @@ from datetime import datetime
 import openpyxl,  os, csv, codecs, chardet, urllib.parse, re, io, math, pprint
 
 
-
 UPLOAD_NOT_COMPLETED = 0
 CSV_OUTPUT_COMPLETED = 1
 VISUALLY_CONFIRMED = 2
@@ -120,6 +119,12 @@ class CustomerSelectAndBrycenFileUpLoadView(CreateView):
     form_class = CustomerSelectAndFileUpLoadMultiFrom
     template_name = 'app/customer_brycen_file_select.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status'] = 'CREATE_START'
+
+        return context
+
     def form_valid(self, form):
         generated_data = form['generated_data'].save(commit=False)
         staff = Staff.objects.get(staff=self.request.user)
@@ -152,6 +157,7 @@ class SelectFileOrBillingDataFormView(CreateView):
         context = super().get_context_data(**kwargs)
         context['matched'] = matched
         context['billing'] = billing
+        context['status'] = UPLOAD_NOT_COMPLETED
 
         return context
 
