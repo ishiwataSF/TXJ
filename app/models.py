@@ -46,6 +46,7 @@ class Product(models.Model):
 
 
 class GeneratedData(models.Model):
+    created_date = models.DateTimeField(default=timezone.now)
     update_date = models.DateTimeField(default=timezone.now)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
