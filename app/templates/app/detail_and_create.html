@@ -12,7 +12,16 @@
       <tr><th>アップロード日</th><td>{{ matched.created_date }}</td></tr>
       <tr><th>担当者</th><td>{{ matched.generated.staff }}</td></tr>
       <tr><th>契約データ</th><td><a href="{{ matched.brycen_file.url }}" download="{{ name }}">{{ matched.brycen_filename }}</a></td></tr>
-      <tr><th>請求データ</th><td><a href="{{ matched.billing_file.url }}" download="{{ name }}">{{ matched.billing_filename }}</a></td></tr>
+      <tr><th>請求データ</th>
+          {% if matched.billing_file %}
+            <td><a href="{{ matched.billing_file.url }}" download="{{ name }}">{{ matched.billing_filename }}</a></td>
+          {% else %}
+          <td><a href="{% url 'billing_data_detail' matched_data_pk=matched.id billing_data_last_row_pk=billing_data_last_row_pk %}">
+              {{ billing.last.created_date|date:"Y/n/j H:i" }} 入力データ
+              </a>
+          </td>
+          {% endif %}
+      </tr>
       </thead>
     </table><br>
 </details><br>

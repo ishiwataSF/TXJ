@@ -37,8 +37,8 @@
 {% if user.is_authenticated %}
 {% if not page == 'LOGIN' %}
 <div class="page-header">
-    <a href="{% url 'top' %}" style="color: #ffffff;">TOP</a>
-    <div style="text-align: right;"><a href="{% url 'logout' %}">Log out</a></div>
+    <div id="top_btn"><a href="{% url 'top' %}" style="color: #ffffff;">TOP</a></div>
+    <div id="logout_btn" style="text-align: right;"><a href="{% url 'logout' %}">Log out</a></div>
 </div>
 {% endif %}
 
@@ -55,7 +55,7 @@
         {% if status == 'CUSTOMER_SELECT' %}
         <!--<p><button type="button" class="btn btn-info">ステータス：取引先選択</button></p>-->
         {% elif status is 0 %}
-        <p><button type="button" class="btn btn-info">ステータス：未アップロード</button></p>
+        <p><button type="button" class="btn btn-info">ステータス：請求データ未作成</button></p>
         {% elif status is 1 %}
         <p><button type="button" class="btn btn-info">ステータス：CSV出力済</button></p>
         {% elif status is 2 %}

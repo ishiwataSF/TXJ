@@ -83,4 +83,28 @@ li {
 .billing-place-form{
     width: 9rem;
     }
-    
+
+.delete-row {
+    display: inline-block;
+    position: relative;
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background-color: #aaa;
+    margin-top: 6px;
+    cursor: pointer;
+}
+
+.delete-row .caption {
+  position: absolute;
+  font-size: 25px;
+  color: #fff;
+  display: block;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 33px;
+}
+.delete-btn input{
+    display:none;
+}

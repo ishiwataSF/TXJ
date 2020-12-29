@@ -2,50 +2,84 @@
 {% extends 'app/base.html' %}
 
 {% block content %}
-<h5>取引先名:{{ generated.customer }}</h5>
-<h4>案件NO.{{　generated.pk}}</h4><br>
-{% comment %}<form method="POST" class="post-form">{% endcomment %}
-<form method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
-    <table class="table table-sm table-hover" id="incompleteTable"
-           cellspacing="0" cellpadding="5"
-           data-filter-control="true" data-show-search-clear-button="true">
+<div class="my-4 ml-2">
+    <h4>案件NO.{{ generated.pk }}</h4>
+    <h5>取引先名:{{ generated.customer }}</h5><br>
+    {% if mode == 'EDIT'%}
+    最終更新者:{{ billing.last.staff }}<br>
+    最終更新日:{{ billing.last.created_date }}
+    {% endif %}
 
-        <thead class="thead-light">
-            <tr>
-                <th>請求日</th>
-                <th>業者</th>
-                <th>事業所</th>
-                <th>商品</th>
-                <th>品目</th>
-                <th>数量</th>
-                <th>単位</th>
-                <th>単価</th>
-                <th>合計</th>
-            </tr>
-        </thead>
-        {{ formset.management_form }}
-        <tbody id="form">
-            {% for form in formset %}
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <table class="table table-sm table-hover" id="incompleteTable"
+               cellspacing="0" cellpadding="5"
+               data-filter-control="true" data-show-search-clear-button="true">
+
+            <thead class="thead-light">
                 <tr>
-                    <td>{{ form.id }}{{ form.billing_date }}</td>
-                    <td>{{ form.agent }}</td>
-                    <td>{{ form.place }}</td>
-                    <td>{{ form.product }}</td>
-                    <td>{{ form.item }}</td>
-                    <td>{{ form.amount }}</td>
-                    <td>{{ form.unit }}</td>
-                    <td>{{ form.unit_price }}</td>
-                    <td>{{ form.total }}</td>
-                    <td class="delete-btn">{{ form.DELETE }}</td>
+                    <th>請求日</th>
+                    <th>業者</th>
+                    <th>事業所</th>
+                    <th>商品</th>
+                    <th>品目</th>
+                    <th>数量</th>
+                    <th>単位</th>
+                    <th>単価</th>
+                    <th>合計</th>
+                    <th></th>
                 </tr>
-            {% endfor %}
-        </tbody>
-        <td><h3><span id="add_button" class="badge badge-light" style="font-weight: 100;">行追加</span></h3></td>
-    </table>
-    <button name="save" type="submit" class="btn btn-outline-primary">一時保存</button>
-    <button name="save_and_create" class="btn btn-outline-primary">save</button>
-</form>
+            </thead>
+            {{ formset.management_form }}
+            <tbody id="form">
+                {% for form in formset %}
+                    <tr>
+                        <td>{{ form.id }}{{ form.billing_date }}</td>
+                        <td>{{ form.agent }}</td>
+                        <td>{{ form.place }}</td>
+                        <td>{{ form.product }}</td>
+                        <td>{{ form.item }}</td>
+                        <td>{{ form.amount }}</td>
+                        <td>{{ form.unit }}</td>
+                        <td>{{ form.unit_price }}</td>
+                        <td>{{ form.total }}</td>
+                        <td class="delete-btn">{{ form.DELETE }}<span class="delete-row"{% if formset|length == 1 %} style="display:none;"{% endif %}><span class="caption">&times;</span></span></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+            <span id="add_button" class="btn btn-light">行追加</span><br><br>
+            <button name="save" type="submit" class="btn btn-outline-primary">一時保存</button>
+            {% comment %}<button name="save_and_create" type="submit" class="btn btn-outline-primary">save</button>{% endcomment %}
+        <!-- Button trigger modal -->
+<button type="button" class="btn btn-outline-primary" data-toggle="modal" data-target="#exampleModal">
+  確定
+</button>
+
+<!-- Modal -->
+<div class="modal fade" data-backdrop="static" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" aria-modal="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">注意</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+          入力内容の編集が出来なくなります。<br>
+          入力した内容で、CSVを出力します。
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">いいえ</button>
+        <button name="save_and_create" type="submit" class="btn btn-primary">はい</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+    </form>
+</div>
 <template id="empty_form">
     <tr>
         <td>{{ formset.empty_form.id }}{{ formset.empty_form.billing_date }}</td>
@@ -57,7 +91,7 @@
         <td>{{ formset.empty_form.unit }}</td>
         <td>{{ formset.empty_form.unit_price }}</td>
         <td>{{ formset.empty_form.total }}</td>
-        <td class="delete-btn">{{ formset.empty_form.DELETE}}</td>
+        <td class="delete-btn">{{ formset.empty_form.DELETE}}<span class="delete-row"><span class="caption">&times;</span></span></td>
     </tr>
 </template>
 
@@ -75,26 +109,21 @@
             const $newForm = $($('#empty_form').html().replace(/__prefix__/g, formIdx));
             $form.append($newForm);
             $('#id_form-TOTAL_FORMS').val(parseInt(formIdx) + 1);
-            $('.delete-btn').css({'display': 'block'});
+            $('.delete-btn .delete-row').css({'display': 'inline-block'});
 
-                //追加された行を非表示にする処理
-                $('.delete-btn').children('input').on('change', function(e) {
-                    $(this).parents('tr').css({'display': 'none'});
-                    $(this).parents('tr').attr('class', 'count');
-                    var Judgment = $('#id_form-TOTAL_FORMS').val() - $('.count').length;
-                    if(Judgment == 1) {
-                        $('.delete-btn').css({'display': 'none'});
-                    };
-                });
         });
 
         //既存の行を非表示にする処理
-        $('.delete-btn').children('input').on('change', function(e) {
+        $(document).on('click', '.delete-btn .delete-row', function(e) {
             $(this).parents('tr').css({'display': 'none'});
             $(this).parents('tr').attr('class', 'count');
+            $(this).siblings('input[type="checkbox"]').prop('checked', true);
+            const $tdChildren = $(this).parents('tr').find('td').children();
+            $tdChildren.removeAttr('required');
             var Judgment = $('#id_form-TOTAL_FORMS').val() - $('.count').length;
             if(Judgment == 1) {
-                $('.delete-btn').css({'display': 'none'});
+                $('.delete-btn .delete-row').css({'display': 'none'});
+
             };
         });
 

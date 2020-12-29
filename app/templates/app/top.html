@@ -27,36 +27,57 @@
                         <th>取引先</th>
                         <th>担当者</th>
                         <th>請求データ/目視確認ファイル</th>
-                        <th>ファイル名</th>
+                        <th></th>
                     </tr>
                 </thead><br>
                 <tbody>
                 {% for m in matched %}
-                {% if m.generated.status is 1 %}
-                    <tr>
+                {% if m.generated.status is 0 or m.generated.status is 1%}
+                 <tr>
                         <td>{{ m.generated.pk }}</td>
+                        {% if m.matched_data_file %}
                         <td><a href="{%url 'detail_and_create' pk=m.pk %}">{{ m.created_date|date:"Y/n/j H:i" }}</a></td>
-                        <td>CSV出力済</td>
+                        {% else %}
+                        <td><a href="{%url 'select_billing_file_or_form' pk=m.pk %}">{{ m.created_date|date:"Y/n/j H:i" }}</a></td>
+                        {% endif %}
+                        {% if m.generated.status == 0 %}
+                        <td>{{ m.generated.status }}:請求データ未作成</td>
+                        {% elif m.generated.status == 1 %}
+                        <td>{{ m.generated.status }}:CSV出力済</td>
+                        {% endif %}
                         <td>{{ m.generated.customer }}</td>
                         <td>{{ m.staff}}</td>
                         <td>請求データ</td>
-                        {% if m.billing_file %}
-                        <td><a href="{{ m.billing_file.url }}">{{ m.billing_filename }}</a></td>{% endif %}
+                        {% if m.billing_file and m.matched_data_file %}
+                        <td>
+                            <a href="{{ m.billing_file.url }}">{{ m.billing_filename }}</a>
+                        </td>
+                        {% elif not m.billing_file and m.matched_data_file %}
+                        <td>
+                            <span class="badge badge-pill badge-info">入力データあり</span>
+                            <a href="{%url 'detail_and_create' pk=m.pk %}">案件詳細画面へ</a>
+                        </td>
+                        {% else %}
+                        <td>
+                            ファイルをアップロードもしくは、データを入力してください。
+                        </td>
                         {% endif %}
                     </tr>
+                {% endif %}
                 {% endfor %}
+
                 {% for v in visually_matched %}
                 {% if v.matched.generated.status is 2 %}
                     <tr>
-                        <td>{{ v.matched.generated.pk }}</td>
+                        <td>{{ v.id }}:{{ v.matched.generated.pk }}</td>
                         <td><a href="{%url 'import_data' pk=v.pk %}">{{ v.created_date|date:"Y/n/j H:i" }}</a></td>
-                        <td>目視確認済</td>
+                        <td>(status:{{ v.matched.generated.status }})目視確認済</td>
                         <td>{{ v.matched.generated.customer }}</td>
                         <td>{{ v.staff}}</td>
                         <td>目視確認ファイル</td>
                         <td><a href="{{ v.matched.matched_data_file.url }}" download="{{ name }}">{{ v.matched.matched_data_filename }}</a></td>
-                        {% endif %}
                     </tr>
+                {% endif %}
                 {% endfor %}
                 </tbody>
             </table>
@@ -82,12 +103,18 @@
                         <td><a href="{% url 'import_data_detail' pk=i.pk %}">{{ i.created_date|date:"Y/n/j H:i" }}</a></td>
                         <td>{{ i.staff }}</td>
                         <td>{{ i.visually_matched.matched.generated.customer }}</td>
+                        {% if i.visually_matched.matched.billing_file %}
                         <td><a href="{{ i.visually_matched.matched.billing_file.url }}">{{ i.visually_matched.matched.billing_filename }}</a></td>
+                        {% else %}
+                        <td>None</td>
+                        {% endif %}
                         {% if i.visually_matched_file %}
                         <td>あり</td>
                         {% else %}
-                        <td>なし</td>{% endif %}
-                        {% endif %}{% endfor %}
+                        <td>なし</td>
+                        {% endif %}
+                    {% endif %}
+                    {% endfor %}
                     </tr>
                 </tbody>
             </table>

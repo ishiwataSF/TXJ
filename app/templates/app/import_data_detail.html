@@ -23,7 +23,13 @@
           <tr><th>アップロード日</th><td>{{ import_data.visually_matched.matched.created_date }}</td></tr>
           <tr><th>担当者</th><td>{{ import_data.visually_matched.matched.staff }}</td></tr>
           <tr><th>契約データ</th><td><a href="{{ matched_data.brycen_file.url }}" download="{{ name }}">{{ matched_data.brycen_filename }}</a></td></tr>
-          <tr><th>請求データ</th><td><a href="{{ matched_data.billing_file.url }}" download="{{ name }}">{{ matched_data.billing_filename }}</a></td></tr>
+          <tr><th>請求データ</th>
+            {% if matched_data.billing_file %}
+              <td><a href="{{ matched_data.billing_file.url }}" download="{{ name }}">{{ matched_data.billing_filename }}</a></td>
+            {% else %}
+              <td>None</td>
+          </tr>
+            {% endif %}
         </thead>
     </table>
   </div>

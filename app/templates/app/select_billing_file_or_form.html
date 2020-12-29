@@ -2,16 +2,49 @@
 {% extends 'app/base.html' %}
 
 {% block content %}
+
+<h4>案件NO.{{　matched.generated.pk}}</h4>
+<h5>取引先名:{{ matched.generated.customer }}</h5>
+<details {% if billing.last %} open {% endif %}>
+    <summary style="font-size: larger;">案件詳細</summary>
+    <label>アップロード情報</label>
+    <table border="1" style=" width: 45rem;" cellspacing="0" cellpadding="5">
+        <tr><th>アップロード日</th><td>GeneratedDataのcreated_dateフィールドを表示させる</td></tr>
+        <tr><th>担当者</th><td>{{ matched.generated.staff }}</td></tr>
+        <tr><th>契約データ</th><td><a href="{{ matched.brycen_file.url }}">{{ matched.brycen_filename }}</a></td></tr>
+    </table>
+</details><br>
+
+{% if billing.last is None %}
 <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="card" style="width: 550; padding: 20px 10px 20px 10px;">
-        <label>電子データを選択してください</label>
+        <label>請求データファイルを選択してください</label>
         {{ form.billing_file }}
-    </div>
+        {{ form.billing_file.errors }}
+    </div><br>
     <div class="select-button"><button type="submit" class="btn btn-outline-primary">upload</button></div>
     ※uploadを押すと選択したファイルを基に付け合わせ済ファイルを作成します。
-</form>
+</form><br>
 
-<a href="{% url 'billing_data_create' pk=matched.id %}">Billing_data入力フォーム</a>
+<a href="{% url 'billing_data_create' pk=matched.id %}">
+    <div class="select-button">
+        <button type="button" class="btn btn-outline-primary">
+            <span style="margin-right : 5px;">請求データ入力画面へ</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-circle-fill" viewBox="0 0 16 16">
+              <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM6.79 5.093A.5.5 0 0 0 6 5.5v5a.5.5 0 0 0 .79.407l3.5-2.5a.5.5 0 0 0 0-.814l-3.5-2.5z"/>
+            </svg>
+        </button>
+    </div>
+</a>
+
+{% else %}
+<a href="{%url 'billing_data_edit' matched_data_pk=matched.id billing_data_last_row_pk=billing.last.id%}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill text-warning" viewBox="0 0 16 16">
+        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+    </svg>
+    入力途中の請求データがあります
+</a>
+{% endif %}
 
 {% endblock %}

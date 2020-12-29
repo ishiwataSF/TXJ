@@ -6,7 +6,11 @@
 <h5>取引先名:{{ matched.generated.customer }}</h5>
 <h4>案件NO.{{　matched.generated.pk}}</h4><br>
 
-<a href="{% url 'billing_data_edit' matched_data_pk=matched_data_pk billing_data_last_row_pk=billing_data_pk %}">編集</a>
+最終更新者:{{ billing.last.staff }}<br>
+最終更新日:{{ billing.last.created_date }}<br>
+{% if matched.generated.status == matched.generated.UPLOAD_NOT_COMPLETED%}
+    <a href="{% url 'billing_data_edit' matched_data_pk=matched_data_pk billing_data_last_row_pk=billing_data_pk %}">編集</a>
+{% endif%}
 
 <table class="table table-sm table-hover" id="incompleteTable"
        cellspacing="0" cellpadding="5"

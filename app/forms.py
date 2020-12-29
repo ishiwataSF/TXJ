@@ -25,6 +25,14 @@ class UploadFileSelectForm(forms.ModelForm):
                    'billing_file': forms.FileInput(attrs={'accept': '.csv'})}
 
 class BiilingFileUploadFrom(forms.ModelForm):
+    def is_valid(self):
+        valid = super().is_valid()
+        if valid and self.cleaned_data['billing_file'] is None:
+            e = ValidationError('ファイルを選択してください')
+            self.add_error('billing_file', e)
+            return False
+        return valid
+
     class Meta:
         model = MatchedData
         fields = ('billing_file', )
@@ -104,26 +112,19 @@ class BillingDataFrom(forms.ModelForm):
     class Meta:
         model = BillingData
         fields = ('billing_date', 'agent', 'product', 'place', 'item', 'amount', 'unit', 'unit_price', 'total', )
-        widgets = {'billing_date': forms.TextInput(attrs={'class': 'billing-data-date-form form-control','type': 'date'}),
-                   'amount': forms.NumberInput(attrs={'class': 'billing-data-amount-form form-control'}),
-                   'unit_price': forms.NumberInput(attrs={'class': 'billing-data-unit_price-form form-control'}),
-                   'total': forms.NumberInput(attrs={'class': 'billing-data-total-form form-control'}),
-                   'agent': forms.widgets.Select(attrs={'class': 'billing-agent-form form-control'}),
-                   'product': forms.Select(attrs={'class': 'billing-product-form form-control'}),
-                   'place': forms.Select(attrs={'class': 'billing-place-form form-control'}),
-                   'item': forms.Select(attrs={'class': 'form-control'}),
-                   'unit': forms.Select(attrs={'class': 'form-control'})}
-
-
+        widgets = {'billing_date': forms.TextInput(attrs={'class': 'billing-data-date-form form-control','type': 'date', 'required': 'required'}),
+                   'amount': forms.NumberInput(attrs={'class': 'billing-data-amount-form form-control', 'required': 'required'}),
+                   'unit_price': forms.NumberInput(attrs={'class': 'billing-data-unit_price-form form-control', 'required': 'required'}),
+                   'total': forms.NumberInput(attrs={'class': 'billing-data-total-form form-control', 'required': 'required'}),
+                   'agent': forms.widgets.Select(attrs={'class': 'billing-agent-form form-control', 'required': 'required'}),
+                   'product': forms.Select(attrs={'class': 'billing-product-form form-control', 'required': 'required'}),
+                   'place': forms.Select(attrs={'class': 'billing-place-form form-control', 'required': 'required'}),
+                   'item': forms.Select(attrs={'class': 'form-control', 'required': 'required'}),
+                   'unit': forms.Select(attrs={'class': 'form-control', 'required': 'required'})}
 
 
 BillingDataFromSet = modelformset_factory(
     BillingData, form=BillingDataFrom, exclude=('create_date', 'staff', ), extra=1, can_delete=True)
-
-
-
-
-
 
 
 

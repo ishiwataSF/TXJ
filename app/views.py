@@ -3,6 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.db import transaction
 from django.utils import timezone
@@ -55,17 +56,18 @@ class HistoryListView(LoginRequiredMixin, ListView):
         matched = MatchedData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
         visually_matched = VisuallyMatchedData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
         import_data = ImportData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
+        billing = BillingData.objects.all()
+
         context = super().get_context_data(**kwargs)
         context['customer'] = customer
         context['staff'] = staff
         context['matched'] = matched
+        context['billing'] = billing
         context['visually_matched'] = visually_matched
         context['import_data'] = import_data
         context['page'] = 'TOP'
 
         return context
-
-
 
 
 class CustomerSelectAndFileUpLoadView(LoginRequiredMixin, CreateView):
@@ -129,7 +131,7 @@ class CustomerSelectAndBrycenFileUpLoadView(CreateView):
         matched_data.generated = generated_data
         staff = Staff.objects.get(staff=self.request.user)
         matched_data.staff = staff
-        matched_data.generated.status = CSV_OUTPUT_COMPLETED
+        matched_data.generated.status = UPLOAD_NOT_COMPLETED
         matched_data.save()
 
         return super().form_valid(form)
@@ -146,23 +148,29 @@ class SelectFileOrBillingDataFormView(CreateView):
     def get_context_data(self, **kwargs):
         matched_data_pk = self.kwargs['pk']
         matched = MatchedData.objects.get(pk=matched_data_pk)
+        billing = BillingData.objects.filter(matched_id=matched_data_pk)
         context = super().get_context_data(**kwargs)
         context['matched'] = matched
+        context['billing'] = billing
 
         return context
 
     def form_valid(self, form):
+        matched_data = MatchedData.objects.get(pk=self.kwargs['pk'])
+        generated_data_pk = matched_data.generated.id
+        generated = GeneratedData.objects.get(pk=generated_data_pk)
+        generated.status = CSV_OUTPUT_COMPLETED
+        generated.save()
+
         matched = form.save(commit=False)
         staff = Staff.objects.get(staff=self.request.user)
         matched.staff = staff
-        matched_data = MatchedData.objects.get(pk=self.kwargs['pk'])
         matched.id = matched_data.id
         matched.generated_id = matched_data.generated_id
         matched.brycen_file = matched_data.brycen_file
         print(f'matched_data:{matched_data}')
         print(f'matched_data.brycen_file:{matched_data.brycen_file}')
         matched.save()
-
 
         brycen_file_path = urllib.parse.unquote(matched.brycen_file.path)
         billing_file_path = urllib.parse.unquote(matched.billing_file.path)
@@ -175,9 +183,6 @@ class SelectFileOrBillingDataFormView(CreateView):
 
         # ファイルsave
         matched.matched_data_file.save(file_name, ContentFile(output_data))
-
-        # csv_createに必要な情報
-        # brycen_file&billing_file
 
         return super().form_valid(form)
 
@@ -199,6 +204,7 @@ class BillingDataCreateView(LoginRequiredMixin, CreateView):
         context['formset'] = formset
         context['page'] = 'BILLING_DATA'
         context['generated'] = generated
+        context['mode'] = 'CREATE'
 
         return context
 
@@ -208,37 +214,67 @@ class BillingDataCreateView(LoginRequiredMixin, CreateView):
             return self.form_valid(formset)
 
     def form_valid(self, formset):
+        matched_data_pk = self.kwargs['pk']
+        matched = MatchedData.objects.get(pk=matched_data_pk)
+        generated_data_pk = matched.generated.id
+        generated = GeneratedData.objects.get(id=generated_data_pk)
+        staff = Staff.objects.get(staff=self.request.user)
+
         if 'save' in self.request.POST:
+            self._post_mode = 'SAVE'
+            generated.update_date = timezone.now()
+            generated.save()
+
             instances = formset.save(commit=False)
             for instance in instances:
-                staff = Staff.objects.get(staff=self.request.user)
-                matched_data_pk = self.kwargs['pk']
-                matched = MatchedData.objects.get(pk=matched_data_pk)
                 instance.staff = staff
                 instance.matched = matched
-                instance.matched.generated.update_date = timezone.now()
                 instance.save()
 
-        if 'save_and_create' in self.request.POST:
+        elif 'save_and_create' in self.request.POST:
+            self._post_mode = 'SAVE_AND_CREATE'
             print('save_and_create')
+            generated.status = CSV_OUTPUT_COMPLETED
+            generated.update_date = timezone.now()
+            generated.save()
+
             instances = formset.save(commit=False)
             for instance in instances:
-                staff = Staff.objects.get(staff=self.request.user)
-                matched_data_pk = self.kwargs['pk']
-                matched = MatchedData.objects.get(pk=matched_data_pk)
                 instance.staff = staff
                 instance.matched = matched
-                instance.matched.generated.update_date = timezone.now()
                 instance.save()
+
+                if formset.deleted_objects:
+                    for delete in formset.deleted_objects:
+                        delete.delete()
+
+                billing_data = BillingData.objects.filter(matched_id=matched_data_pk)
+                brycen_file_path = urllib.parse.unquote(matched.brycen_file.path)
+
+                # ファイル命名
+                now = datetime.now()
+                file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
+
+                output_data = create_csv_from_billing_data(billing_data, brycen_file_path)
+
+                # ファイルsave
+                matched.matched_data_file.save(file_name, ContentFile(output_data))
+
         return super().form_valid(formset)
 
     def get_success_url(self):
         matched_data_pk = self.kwargs['pk']
-        matched = MatchedData.objects.get(pk=matched_data_pk)
-        billing = BillingData.objects.filter(matched_id=matched_data_pk)
-        billing_data_last_row_pk = billing.last().id
-        return reverse('billing_data_detail',
-                       kwargs={'matched_data_pk': matched.id, 'billing_data_last_row_pk': billing_data_last_row_pk})
+        if self._post_mode == 'SAVE':
+            print('post_mode save')
+            matched = MatchedData.objects.get(pk=matched_data_pk)
+            billing = BillingData.objects.filter(matched_id=matched_data_pk)
+            billing_data_last_row_pk = billing.last().id
+
+            return reverse('billing_data_detail',
+                           kwargs={'matched_data_pk': matched.id, 'billing_data_last_row_pk': billing_data_last_row_pk})
+        else:
+            print('post_mode save_and_create')
+            return reverse('detail_and_create', kwargs={'pk': matched_data_pk})
 
 
 class BillingDataDetailView(LoginRequiredMixin, DetailView):
@@ -255,72 +291,6 @@ class BillingDataDetailView(LoginRequiredMixin, DetailView):
             return obj
 
     def get_context_data(self, **kwargs):
-        WOOD_PALLET_ITEM_NUM = 0
-        CONTAINER_REPLACEMENT_ITEM_NUM = 1
-        CONTAINER_RENTAL_ITEM_NUM = 2
-        STRETCH_FILM_ITEM_NUM = 3
-        SLUDGES_ITEM_NUM = 4
-        SCRAP_ITEM_NUM = 7
-        GENERAL_WASTE_ITEM_NUM = 9
-        INDUSTRIAL_WASTE_ITEM_NUM = 10
-        MANIFEST_ITEM_NUM = 11
-        WASTE_ELEMENT_ITEM_NUM = 12
-        WASTE_TIRE_ITEM_NUM = 13
-        BASE_TIRE_ITEM_NUM = 14
-        WASTE_COOLANT_ITEM_NUM = 15
-        WASTE_OIL_ITEM_NUM = 16
-        INDUSTRIAL_WASTE_TAX_ITEM_NUM = 17
-        WASTE_BATTERY_ITEM_NUM = 18
-
-        KG_UNIT_NUM = 0
-        CAR_UNIT_NUM = 1
-        ONESET_UNIT_NUM = 2
-        MONTHLY_UNIT_NUM = 3
-        CUBIC_METER_UNIT_NUM = 4
-        TIMES_UNIT_NUM = 5
-        CASE_UNIT_NUM = 6
-        PEDESTAL_UNIT_NUM = 7
-        TIRE_UNIT_NUM = 8
-        LITER_UNIT_NUM = 9
-        SHEET_UNIT_NUM = 10
-        METER_UNIT_NUM = 12
-        QUANTITY_UNIT_NUM = 13
-
-        item = {
-            WOOD_PALLET_ITEM_NUM: '木パレット',
-            CONTAINER_REPLACEMENT_ITEM_NUM: 'コンテナ交換',
-            CONTAINER_RENTAL_ITEM_NUM: 'コンテナレンタル代',
-            STRETCH_FILM_ITEM_NUM: 'ストレッチフィルム',
-            SLUDGES_ITEM_NUM: '汚泥',
-            SCRAP_ITEM_NUM: 'スクラップ類',
-            GENERAL_WASTE_ITEM_NUM: '一般廃棄物',
-            INDUSTRIAL_WASTE_ITEM_NUM: '産業廃棄物',
-            MANIFEST_ITEM_NUM: 'マニフェスト',
-            WASTE_ELEMENT_ITEM_NUM: '廃エレメント',
-            WASTE_TIRE_ITEM_NUM: '廃タイヤ',
-            BASE_TIRE_ITEM_NUM: '台タイヤ',
-            WASTE_COOLANT_ITEM_NUM: '廃クーラント',
-            WASTE_OIL_ITEM_NUM: '廃油',
-            INDUSTRIAL_WASTE_TAX_ITEM_NUM: '産廃税',
-            WASTE_BATTERY_ITEM_NUM: '廃バッテリー',
-        }
-
-        unit = {
-            KG_UNIT_NUM: 'kg',
-            CAR_UNIT_NUM: '車',
-            ONESET_UNIT_NUM: '式',
-            MONTHLY_UNIT_NUM: '月額',
-            CUBIC_METER_UNIT_NUM: '立米',
-            TIMES_UNIT_NUM: '回',
-            CASE_UNIT_NUM: 'ケース',
-            PEDESTAL_UNIT_NUM: '台',
-            TIRE_UNIT_NUM: '本',
-            LITER_UNIT_NUM: 'リットル',
-            SHEET_UNIT_NUM: '枚',
-            METER_UNIT_NUM: 'メートル',
-            QUANTITY_UNIT_NUM: '個'
-        }
-
         matched_data_pk = self.kwargs['matched_data_pk']
         billing = BillingData.objects.filter(matched_id=matched_data_pk)
         matched = MatchedData.objects.get(id=matched_data_pk)
@@ -360,55 +330,56 @@ class BillingDataUpdateView(LoginRequiredMixin, UpdateView):
             return self.form_valid(formset)
 
     def form_valid(self, formset):
+        matched_data_pk = self.kwargs['matched_data_pk']
+        matched = MatchedData.objects.get(pk=matched_data_pk)
+        generated_data_pk = matched.generated.id
+        generated = GeneratedData.objects.get(id=generated_data_pk)
+        staff = Staff.objects.get(staff=self.request.user)
+        billing_data = BillingData.objects.filter(matched_id=matched_data_pk)
+        for b in billing_data:
+            print(b.created_date)
+
         if 'save' in self.request.POST:
+            generated.update_date = timezone.now()
+            generated.save()
+
             instances = formset.save(commit=False)
             for instance in instances:
-                staff = Staff.objects.get(staff=self.request.user)
-                matched_data_pk = self.kwargs['matched_data_pk']
-                matched = MatchedData.objects.get(pk=matched_data_pk)
                 instance.staff = staff
+                instance.create_date = timezone.now()
                 instance.matched = matched
-                instance.matched.generated.update_date = timezone.now()
                 instance.save()
 
         if 'save_and_create' in self.request.POST:
             print('save_and_create')
+            generated.status = CSV_OUTPUT_COMPLETED
+            generated.update_date = timezone.now()
+            generated.save()
+
             instances = formset.save(commit=False)
             for instance in instances:
-                staff = Staff.objects.get(staff=self.request.user)
-                matched_data_pk = self.kwargs['matched_data_pk']
-                matched = MatchedData.objects.get(pk=matched_data_pk)
                 instance.staff = staff
+                instance.create_date = timezone.now()
                 instance.matched = matched
-                instance.matched.generated.update_date = timezone.now()
                 instance.save()
+
+            if formset.deleted_objects:
                 for delete in formset.deleted_objects:
                     delete.delete()
 
-                '''
-                billing_data = BillingData.objects.filter(matched_id=matched_data_pk)
+            brycen_file_path = urllib.parse.unquote(matched.brycen_file.path)
 
-                billing_date = {}
-                agent = {}
-                place = {}
-                product = {}
-                item = {}
-                amount = {}
-                unit = {}
-                unit_price = {}
-                total = {}
-                for b in billing_data:
-                    print(b.billing_date)
-                    billing_date['billing_date'] = b.billing_date
-                    agent['agent'] = b.agent
-                    place['place'] = b.place
-                    product['product'] = b.product
-                    item['item'] = b.item
-                    amount['amount'] = b.amount
-                    unit['unit'] = b.unit
-                    unit_price['unit_price'] = b.unit_price
-                    total['total'] = b.total
-            '''
+            # ファイル命名
+            now = datetime.now()
+            file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
+
+            output_data = create_csv_from_billing_data(billing_data, brycen_file_path)
+
+            # ファイルsave
+            matched.matched_data_file.save(file_name, ContentFile(output_data))
+
+            return HttpResponseRedirect(reverse('detail_and_create', kwargs={'pk': matched_data_pk}))
+
         return super().form_valid(formset)
 
     def get_context_data(self, **kwargs):
@@ -416,10 +387,15 @@ class BillingDataUpdateView(LoginRequiredMixin, UpdateView):
         matched = MatchedData.objects.get(pk=matched_data_pk)
         generated = matched.generated
         formset = BillingDataFromSet(queryset=BillingData.objects.filter(matched_id=matched_data_pk), form_kwargs={'customer_id': generated.customer.id})
+        billing = BillingData.objects.filter(matched_id=matched_data_pk)
+        billing_last = billing.last()
         context = super().get_context_data(**kwargs)
         context['formset'] = formset
         context['page'] = 'BILLING_DATA'
         context['generated'] = generated
+        context['billing'] = billing
+        context['billing_last'] = billing_last
+        context['mode'] = 'EDIT'
 
         return context
 
@@ -427,10 +403,205 @@ class BillingDataUpdateView(LoginRequiredMixin, UpdateView):
         matched_data_pk = self.kwargs['matched_data_pk']
         billing = BillingData.objects.filter(matched_id=matched_data_pk)
         billing_data_pk = billing.last().id
-        return reverse('billing_data_detail', kwargs={'matched_data_pk':matched_data_pk, 'billing_data_last_row_pk': billing_data_pk})
+        return reverse('billing_data_detail', kwargs={'matched_data_pk': matched_data_pk, 'billing_data_last_row_pk': billing_data_pk})
 
 
-class MatchedDataDetailAndVisuallyMatchedDataCreateView(LoginRequiredMixin, DetailView, CreateView):
+# BillingData用突合ロジック
+def create_csv_from_billing_data(billing_data_queryset, brycen_file_path):
+    BRYCEN_CUSTOMER_NUM = 0
+    BRYCEN_STORE_CODE_NUM = 1
+    BRYCEN_PT_CODE_NUM = 2
+    BRYCEN_UNIT_PRICE_NUM = 4
+    BRYCEN_AMOUNT_NUM = 5
+    BRYCEN_TOTAL_NUM = 7
+    BRYCEN_CONTRACT_START_DATE_NUM = 9
+    BRYCEN_CONTRACT_END_DATE_NUM = 13
+
+    WOOD_PALLET_ITEM_NUM = 0
+    CONTAINER_REPLACEMENT_ITEM_NUM = 1
+    CONTAINER_RENTAL_ITEM_NUM = 2
+    STRETCH_FILM_ITEM_NUM = 3
+    SLUDGES_ITEM_NUM = 4
+    SCRAP_ITEM_NUM = 7
+    GENERAL_WASTE_ITEM_NUM = 9
+    INDUSTRIAL_WASTE_ITEM_NUM = 10
+    MANIFEST_ITEM_NUM = 11
+    WASTE_ELEMENT_ITEM_NUM = 12
+    WASTE_TIRE_ITEM_NUM = 13
+    BASE_TIRE_ITEM_NUM = 14
+    WASTE_COOLANT_ITEM_NUM = 15
+    WASTE_OIL_ITEM_NUM = 16
+    INDUSTRIAL_WASTE_TAX_ITEM_NUM = 17
+    WASTE_BATTERY_ITEM_NUM = 18
+
+    KG_UNIT_NUM = 0
+    CAR_UNIT_NUM = 1
+    ONESET_UNIT_NUM = 2
+    MONTHLY_UNIT_NUM = 3
+    CUBIC_METER_UNIT_NUM = 4
+    TIMES_UNIT_NUM = 5
+    CASE_UNIT_NUM = 6
+    PEDESTAL_UNIT_NUM = 7
+    TIRE_UNIT_NUM = 8
+    LITER_UNIT_NUM = 9
+    SHEET_UNIT_NUM = 10
+    METER_UNIT_NUM = 12
+    QUANTITY_UNIT_NUM = 13
+
+    wb = openpyxl.load_workbook(brycen_file_path)
+    ws = wb.active
+    greatest = ws.max_row
+
+    monthly_fixed_cost_list = []
+    spot_cost_list = []
+    row_count = 0
+    for row in ws.iter_rows(min_col=6, max_row=greatest + 1):
+        if row[BRYCEN_CUSTOMER_NUM].value:
+            store = row[BRYCEN_STORE_CODE_NUM].value
+            store_split = store.split(':')
+            store_code = int(store_split[0])
+            pt = row[BRYCEN_PT_CODE_NUM].value
+            pt_split = pt.split(':')
+            pt_code = int(pt_split[0])
+            unit_price = row[BRYCEN_UNIT_PRICE_NUM].value
+            unit_price = float(unit_price.replace(',', ''))
+
+            amount = row[BRYCEN_AMOUNT_NUM].value
+            amount = float(amount.replace(',', ''))
+
+            total = row[BRYCEN_TOTAL_NUM].value
+            total = int(total.replace(',', ''))
+
+            contract_start_date = row[BRYCEN_CONTRACT_START_DATE_NUM].value
+            contract_end_date = row[BRYCEN_CONTRACT_END_DATE_NUM].value
+
+            # 契約終了日が空欄だったら
+            if contract_end_date is None:
+                row_count += 1
+                monthly_fixed_cost = [contract_start_date, store_code, pt_code, unit_price, amount, total]
+                monthly_fixed_cost_list.append(monthly_fixed_cost)
+
+            # 契約終了日に日付が入っていたら
+            elif contract_end_date:
+                row_count += 1
+                spot_cost = [contract_start_date, store_code, pt_code, unit_price, amount, total]
+                spot_cost_list.append(spot_cost)
+
+            else:
+                other_list = [contract_start_date, contract_end_date, store_code, pt_code, unit_price, amount, total]
+                print(f'other_list:{other_list}')
+
+    items_dict = {
+        WOOD_PALLET_ITEM_NUM: '木パレット',
+        CONTAINER_REPLACEMENT_ITEM_NUM: 'コンテナ交換',
+        CONTAINER_RENTAL_ITEM_NUM: 'コンテナレンタル代',
+        STRETCH_FILM_ITEM_NUM: 'ストレッチフィルム',
+        SLUDGES_ITEM_NUM: '汚泥',
+        SCRAP_ITEM_NUM: 'スクラップ類',
+        GENERAL_WASTE_ITEM_NUM: '一般廃棄物',
+        INDUSTRIAL_WASTE_ITEM_NUM: '産業廃棄物',
+        MANIFEST_ITEM_NUM: 'マニフェスト',
+        WASTE_ELEMENT_ITEM_NUM: '廃エレメント',
+        WASTE_TIRE_ITEM_NUM: '廃タイヤ',
+        BASE_TIRE_ITEM_NUM: '台タイヤ',
+        WASTE_COOLANT_ITEM_NUM: '廃クーラント',
+        WASTE_OIL_ITEM_NUM: '廃油',
+        INDUSTRIAL_WASTE_TAX_ITEM_NUM: '産廃税',
+        WASTE_BATTERY_ITEM_NUM: '廃バッテリー'
+    }
+
+    units_dict = {
+        KG_UNIT_NUM: 'kg',
+        CAR_UNIT_NUM: '車',
+        ONESET_UNIT_NUM: '式',
+        MONTHLY_UNIT_NUM: '月額',
+        CUBIC_METER_UNIT_NUM: '立米',
+        TIMES_UNIT_NUM: '回',
+        CASE_UNIT_NUM: 'ケース',
+        PEDESTAL_UNIT_NUM: '台',
+        TIRE_UNIT_NUM: '本',
+        LITER_UNIT_NUM: 'リットル',
+        SHEET_UNIT_NUM: '枚',
+        METER_UNIT_NUM: 'メートル',
+        QUANTITY_UNIT_NUM: '個'
+    }
+    billing_data = []
+    writer_data = []
+    for b in billing_data_queryset:
+        date = str(b.billing_date)
+        date_split = date.split('-')
+        year = date_split[0]
+        month = date_split[1]
+        day = date_split[2]
+        billing_date = f'{year}/{month}/{day}'
+        agent_name = b.agent.name
+        agent_code = int(b.agent.code)
+        customer_code = int(b.place.customer.code)
+        place_name = b.place.name
+        place_code = int(b.place.code)
+        product_name = b.product.name
+        product_code = int(b.product.code)
+        item_num = b.item
+        for k, v in items_dict.items():
+            if item_num == k:
+                item_name = v
+        amount = b.amount
+        unit_num = b.unit
+        for k, v in units_dict.items():
+            if unit_num == k:
+                unit = v
+        unit_price = b.unit_price
+        total = b.total
+
+        billing_list = [billing_date, place_code, agent_code, unit_price, amount, total]
+        billing_data.append(billing_list)
+
+        all_billing_data = [customer_code, place_code, place_name, billing_date, agent_code, agent_name,
+                            product_code, item_name, unit_price, amount, unit, total]
+
+        PLACE_CODE_INDEX = 1
+        BILLING_DATE_INDEX = 3
+        AGENT_CODE_INDEX = 4
+        UNIT_PRICE_INDEX = 8
+        AMONT_INDEX = 9
+        TOTAL_INDEX = 11
+
+        compare = [all_billing_data[BILLING_DATE_INDEX], all_billing_data[PLACE_CODE_INDEX], all_billing_data[AGENT_CODE_INDEX],
+                   all_billing_data[UNIT_PRICE_INDEX], all_billing_data[AMONT_INDEX], all_billing_data[TOTAL_INDEX]]
+
+        # 月極費用と請求データの[事業所コード、業者コード、単価、数量、合計金額]が
+        # 完全一致した行をbilling_dataからremove
+        for b in billing_data:
+            for m in monthly_fixed_cost_list:
+                if m[1:] == b[1:]:
+                    print(f'monthly_cost_list billing_list match row:{b}')
+                    billing_data.remove(b)
+
+            # スポット費用と請求データの[契約開始日（請求日）、事業所コード、業者コード、単価、数量、合計金額]が
+            # 完全一致した行をbilling_dataからremove
+            for s in spot_cost_list:
+                if b == s:
+                    print(f'spot_cost billing_data match row:{s}')
+                    billing_data.remove(s)
+
+    # billing_dataのままだとcustomer_code等の情報が欠けている。欠けている情報を補う処理。
+    # all_billing_data(大元の請求データ)を元に作成したcompare(billing_data比較用のリスト)が
+    # billing_dataに含まれる場合は、writer_data.append
+    if compare in billing_data:
+        writer_data.append(all_billing_data)
+        # print(writer_data)
+
+    output = io.StringIO()
+    header = ['取引先名', '支店番号', '支店名', '日付', '業者番号', '業者名', '商品コード', '品目', '単価', '数量', '単位', '合計金額', '備考']
+    writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
+    writer.writerow(header)
+    writer.writerows(writer_data)
+    output_data = output.getvalue() # .encode('cp932')
+
+    return output_data
+
+
+class MatchedDataDetailAndVisuallyMatchedDataCreateView(LoginRequiredMixin, CreateView):
     model = MatchedData
     form_class = VisuallyMatchedDataCreateForm
     template_name = 'app/detail_and_create.html'
@@ -438,9 +609,15 @@ class MatchedDataDetailAndVisuallyMatchedDataCreateView(LoginRequiredMixin, Deta
     def get_context_data(self, **kwargs):
         matched_data_pk = self.kwargs['pk']
         matched = MatchedData.objects.get(pk=matched_data_pk)
+        billing = BillingData.objects.filter(matched_id=matched_data_pk)
         context = super().get_context_data(**kwargs)
+        if billing.exists():
+            billing_data_last_row_pk = billing.last().pk
+            context['billing_data_last_row_pk'] = billing_data_last_row_pk
         context['matched'] = matched
         context['status'] = CSV_OUTPUT_COMPLETED
+        context['billing'] = billing
+
 
         return context
 
@@ -518,7 +695,6 @@ def create_csv(f, f2):
             pt = row[BRYCEN_PT_CODE_NUM].value
             pt_split = pt.split(':')
             pt_code = int(pt_split[0])
-
             unit_price = row[BRYCEN_UNIT_PRICE_NUM].value
             unit_price = float(unit_price.replace(',', ''))
 
@@ -628,7 +804,6 @@ def create_csv(f, f2):
             total = int(total)
 
         store_code = row[BILLING_STORE_CODE_NUM]
-
         store_nam = row[BILLING_STORE_NAM_NUM]
         billing_date = row[BILLING_DAY_NUM]
         pt_code = int(row[BILLING_PT_CODE_NUM])
@@ -717,21 +892,20 @@ def create_csv(f, f2):
         billing_list = [billing_date, store_code, pt_code, unit_price, amount, total]
         billing_data.append(billing_list)
 
-
         all_billing_data = [customer_code, store_code, store_nam, billing_date, pt_code, pt_nam, item_code, item_nam,
                             unit_price, amount, unit, total, remark]
 
-        STORE_CODE_NUM = 1
-        BILLING_DATE_NUM = 3
-        PT_CODE_NUM = 4
-        UNIT_PRICE_NUM = 8
-        AMONT_NUM = 9
-        TOTAL_NUM = 11
+        STORE_CODE_INDEX = 1
+        BILLING_DATE_INDEX = 3
+        PT_CODE_INDEX = 4
+        UNIT_PRICE_INDEX = 8
+        AMONT_INDEX = 9
+        TOTAL_INDEX = 11
 
         # compare = [all_billing_data[1], all_billing_data[4], all_billing_data[8], all_billing_data[9],
                    #all_billing_data[11]]
-        compare = [all_billing_data[BILLING_DATE_NUM], all_billing_data[STORE_CODE_NUM], all_billing_data[PT_CODE_NUM], all_billing_data[UNIT_PRICE_NUM],
-                   all_billing_data[AMONT_NUM], all_billing_data[TOTAL_NUM]]
+        compare = [all_billing_data[BILLING_DATE_INDEX], all_billing_data[STORE_CODE_INDEX], all_billing_data[PT_CODE_INDEX],
+                   all_billing_data[UNIT_PRICE_INDEX], all_billing_data[AMONT_INDEX], all_billing_data[TOTAL_INDEX]]
 
         # billing_list = [billing_date, store_code, pt_code, unit_price, amount, total]
         # print(billing_list)
@@ -842,7 +1016,6 @@ class ImportDataCreateView(LoginRequiredMixin, CreateView):
                 visually_matched_file_path = urllib.parse.unquote(import_data.visually_matched_file.path)
                 output_data = import_data_create(visually_matched_file_path)
                 import_data.import_data_file.save(file_name, ContentFile(output_data))
-
 
         elif 'create' in self.request.POST:
             import_data = form.save(commit=False)
