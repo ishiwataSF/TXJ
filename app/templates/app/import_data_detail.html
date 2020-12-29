@@ -27,7 +27,11 @@
             {% if matched_data.billing_file %}
               <td><a href="{{ matched_data.billing_file.url }}" download="{{ name }}">{{ matched_data.billing_filename }}</a></td>
             {% else %}
-              <td>None</td>
+            <td>
+              <a href="{% url 'billing_data_detail' matched_data_pk=matched_data.pk billing_data_last_row_pk=billing.last.id %}">
+              {{ billing.last.created_date }} 入力データ
+              </a>
+            </td>
           </tr>
             {% endif %}
         </thead>

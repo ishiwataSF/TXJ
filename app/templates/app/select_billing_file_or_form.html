@@ -9,7 +9,7 @@
     <summary style="font-size: larger;">案件詳細</summary>
     <label>アップロード情報</label>
     <table border="1" style=" width: 45rem;" cellspacing="0" cellpadding="5">
-        <tr><th>アップロード日</th><td>GeneratedDataのcreated_dateフィールドを表示させる</td></tr>
+        <tr><th>アップロード日</th><td>{{ matched.generated.created_date }}</td></tr>
         <tr><th>担当者</th><td>{{ matched.generated.staff }}</td></tr>
         <tr><th>契約データ</th><td><a href="{{ matched.brycen_file.url }}">{{ matched.brycen_filename }}</a></td></tr>
     </table>

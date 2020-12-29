@@ -624,7 +624,6 @@ class MatchedDataDetailAndVisuallyMatchedDataCreateView(LoginRequiredMixin, Crea
         context['status'] = CSV_OUTPUT_COMPLETED
         context['billing'] = billing
 
-
         return context
 
     def form_valid(self, form):
@@ -984,13 +983,12 @@ class ImportDataCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         visually_matched_data_pk = self.kwargs['pk']
         visually_matched = VisuallyMatchedData.objects.get(pk=visually_matched_data_pk)
-
         matched_data_pk = visually_matched.matched_id
         matched = MatchedData.objects.get(pk=matched_data_pk)
 
         context = super().get_context_data(**kwargs)
-        context['matched'] = matched
         context['visually_matched'] = visually_matched
+        context['matched'] = matched
         context['status'] = VISUALLY_CONFIRMED
         return context
 
@@ -1558,13 +1556,15 @@ class ImportDataDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         import_data_pk = self.kwargs['pk']
         import_data = ImportData.objects.get(pk=import_data_pk)
-
         matched_data_pk = import_data.visually_matched.matched.pk
         matched_data = MatchedData.objects.get(pk=matched_data_pk)
+        billing = BillingData.objects.filter(matched_id=matched_data_pk)
 
         context = super().get_context_data(**kwargs)
         context['import_data'] = import_data
         context['matched_data'] = matched_data
+        if billing.exists():
+            context['billing'] = billing
         context['status'] = IMPORT_DATA_OUTPUT_COMPLETED
         return context
 

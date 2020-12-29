@@ -55,7 +55,7 @@
                         {% elif not m.billing_file and m.matched_data_file %}
                         <td>
                             <span class="badge badge-pill badge-info">入力データあり</span>
-                            <a href="{%url 'detail_and_create' pk=m.pk %}">案件詳細画面へ</a>
+                            <a href="{%url 'detail_and_create' pk=m.pk %}">案件詳細を参照してください</a>
                         </td>
                         {% else %}
                         <td>
@@ -69,9 +69,9 @@
                 {% for v in visually_matched %}
                 {% if v.matched.generated.status is 2 %}
                     <tr>
-                        <td>{{ v.id }}:{{ v.matched.generated.pk }}</td>
+                        <td>{{ v.matched.generated.pk }}</td>
                         <td><a href="{%url 'import_data' pk=v.pk %}">{{ v.created_date|date:"Y/n/j H:i" }}</a></td>
-                        <td>(status:{{ v.matched.generated.status }})目視確認済</td>
+                        <td>目視確認済</td>
                         <td>{{ v.matched.generated.customer }}</td>
                         <td>{{ v.staff}}</td>
                         <td>目視確認ファイル</td>
@@ -106,7 +106,10 @@
                         {% if i.visually_matched.matched.billing_file %}
                         <td><a href="{{ i.visually_matched.matched.billing_file.url }}">{{ i.visually_matched.matched.billing_filename }}</a></td>
                         {% else %}
-                        <td>None</td>
+                        <td>
+                            <span class="badge badge-pill badge-info">入力データあり</span>
+                            <a href="{% url 'import_data_detail' pk=i.pk %}">アップロード情報を参照してください。</a>
+                        </td>
                         {% endif %}
                         {% if i.visually_matched_file %}
                         <td>あり</td>
