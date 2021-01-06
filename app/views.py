@@ -55,13 +55,10 @@ class HistoryListView(LoginRequiredMixin, ListView):
         matched = MatchedData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
         visually_matched = VisuallyMatchedData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
         import_data = ImportData.objects.filter(created_date__lte=timezone.now()).order_by('-created_date')
-        billing = BillingData.objects.all()
-
         context = super().get_context_data(**kwargs)
         context['customer'] = customer
         context['staff'] = staff
         context['matched'] = matched
-        context['billing'] = billing
         context['visually_matched'] = visually_matched
         context['import_data'] = import_data
         context['page'] = 'TOP'
@@ -160,6 +157,14 @@ class SelectFileOrBillingDataFormView(CreateView):
         context['status'] = UPLOAD_NOT_COMPLETED
 
         return context
+
+    def get_form_kwargs(self, *args, **kwargs):
+        form_kwargs = super().get_form_kwargs(*args, **kwargs)
+        if self.request.method == 'POST':
+            if 'upload' in self.request.POST:
+                form_kwargs.update({'upload': self.request.POST.get('upload', None) is not None})
+
+        return form_kwargs
 
     def form_valid(self, form):
         matched_data = MatchedData.objects.get(pk=self.kwargs['pk'])
@@ -392,7 +397,8 @@ class BillingDataUpdateView(LoginRequiredMixin, UpdateView):
         matched_data_pk = self.kwargs['matched_data_pk']
         matched = MatchedData.objects.get(pk=matched_data_pk)
         generated = matched.generated
-        formset = BillingDataFromSet(queryset=BillingData.objects.filter(matched_id=matched_data_pk), form_kwargs={'customer_id': generated.customer.id})
+        formset = BillingDataFromSet(queryset=BillingData.objects.filter(matched_id=matched_data_pk),
+                                     form_kwargs={'customer_id': generated.customer.id})
         billing = BillingData.objects.filter(matched_id=matched_data_pk)
         billing_last = billing.last()
         context = super().get_context_data(**kwargs)
@@ -590,12 +596,12 @@ def create_csv_from_billing_data(billing_data_queryset, brycen_file_path):
                     print(f'spot_cost billing_data match row:{s}')
                     billing_data.remove(s)
 
-    # billing_dataのままだとcustomer_code等の情報が欠けている。欠けている情報を補う処理。
-    # all_billing_data(大元の請求データ)を元に作成したcompare(billing_data比較用のリスト)が
-    # billing_dataに含まれる場合は、writer_data.append
-    if compare in billing_data:
-        writer_data.append(all_billing_data)
-        # print(writer_data)
+        # billing_dataのままだとcustomer_code等の情報が欠けている。欠けている情報を補う処理。
+        # all_billing_data(大元の請求データ)を元に作成したcompare(billing_data比較用のリスト)が
+        # billing_dataに含まれる場合は、writer_data.append
+        if compare in billing_data:
+            writer_data.append(all_billing_data)
+            # print(writer_data)
 
     output = io.StringIO()
     header = ['取引先名', '支店番号', '支店名', '日付', '業者番号', '業者名', '商品コード', '品目', '単価', '数量', '単位', '合計金額', '備考']
@@ -854,9 +860,6 @@ def create_csv(f, f2):
             customer_mach = re.search(r'(\d{4})', str(store_split[0]))
 
             if not customer_mach:
-                #customer_code = store_split[0]
-                #store_code = int(store_split[1])
-                # print(store_nam)
                 if store_nam:
                     for key, value in all_store_code.items():
                         if store_nam == value:

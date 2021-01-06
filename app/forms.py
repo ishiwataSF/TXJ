@@ -25,9 +25,14 @@ class UploadFileSelectForm(forms.ModelForm):
                    'billing_file': forms.FileInput(attrs={'accept': '.csv'})}
 
 class BiilingFileUploadFrom(forms.ModelForm):
+    def __init__(self, upload='False', *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._upload = upload
+
     def is_valid(self):
         valid = super().is_valid()
-        if valid and self.cleaned_data['billing_file'] is None:
+
+        if valid and self._upload and self.cleaned_data['billing_file'] is None:
             e = ValidationError('ファイルを選択してください')
             self.add_error('billing_file', e)
             return False
@@ -106,6 +111,7 @@ class BillingDataFrom(forms.ModelForm):
 
     def __init__(self, queryset=None, customer_id=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['total'].widget.attrs['readonly'] = 'readonly'
         if customer_id:
             self.fields['place'].queryset = Place.objects.filter(customer_id=customer_id)
 
