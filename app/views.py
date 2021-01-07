@@ -447,6 +447,7 @@ def create_csv_from_billing_data(billing_data_queryset, brycen_file_path):
     WASTE_BATTERY_ITEM_NUM = 18
 
     KG_UNIT_NUM = 0
+    TONNAGE_UNIT_NUM = 14
     CAR_UNIT_NUM = 1
     ONESET_UNIT_NUM = 2
     MONTHLY_UNIT_NUM = 3
@@ -524,6 +525,7 @@ def create_csv_from_billing_data(billing_data_queryset, brycen_file_path):
 
     units_dict = {
         KG_UNIT_NUM: 'kg',
+        TONNAGE_UNIT_NUM: 't',
         CAR_UNIT_NUM: '車',
         ONESET_UNIT_NUM: '式',
         MONTHLY_UNIT_NUM: '月額',
@@ -1482,10 +1484,12 @@ def import_data_create(f):
 
         #  単位がt(半角）だった場合
         elif unit == 't':
+            print('半角')
             kg_conversion()
 
         #  単位がt(全角）だった場合
         elif unit == 'ｔ':
+            print('全角')
             kg_conversion()
 
         #  単価が空で尚且つ、数量も空だった場合

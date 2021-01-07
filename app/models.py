@@ -135,6 +135,7 @@ class BillingData(models.Model):
     item = models.IntegerField(choices=ITEM)
 
     KG_UNIT_NUM = 0
+    TONNAGE_UNIT_NUM = 14
     CAR_UNIT_NUM = 1
     ONESET_UNIT_NUM = 2
     MONTHLY_UNIT_NUM = 3
@@ -150,6 +151,7 @@ class BillingData(models.Model):
 
     UNIT = (
         (KG_UNIT_NUM, 'kg'),
+        (TONNAGE_UNIT_NUM, 't'),
         (CAR_UNIT_NUM, '車'),
         (ONESET_UNIT_NUM, '式'),
         (MONTHLY_UNIT_NUM, '月額'),

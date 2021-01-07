@@ -73,6 +73,8 @@
                 <td>{{ billing_data.amount }}</td>
                 {% if billing_data.unit == billing_data.KG_UNIT_NUM %}
                 <td>kg</td>
+                {% elif billing_data.unit == billing_data.TONNAGE_UNIT_NUM %}
+                <td>t</td>
                 {% elif billing_data.unit == billing_data.CAR_UNIT_NUM %}
                 <td>車</td>
                 {% elif billing_data.unit == billing_data.ONESET_UNIT_NUM %}
