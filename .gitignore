@@ -4,7 +4,6 @@
 __pycache__
 myvenv
 db.mysql
-/static
 .DS_Store
 .id_rsa_github.pub.swp
 git/
