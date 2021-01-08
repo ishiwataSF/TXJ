@@ -12,3 +12,6 @@ media/
 txj_match_ver1.3.py
 txj_irregular_pt_import_data_ver1.1.py
 fixtures/
+wsgi.py
+manage.py
+production_settings.py
