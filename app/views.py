@@ -1,19 +1,16 @@
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.conf import settings
 from django.core.files.base import ContentFile
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.db import transaction
-from django.utils import timezone
 from django.urls import reverse
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
-from .models import Staff, Customer, GeneratedData, MatchedData, VisuallyMatchedData, ImportData, BillingData, Product, Agent, Place
-from .forms import CustomerSelectAndFileUpLoadMultiFrom, VisuallyMatchedDataCreateForm, ImportDataCreateForm, \
-    UploadFileSelectForm,  BillingDataFrom, BiilingFileUploadFrom, BillingDataFromSet
+from .models import *
+from .forms import *
 from datetime import datetime
-import openpyxl,  os, csv, codecs, chardet, urllib.parse, re, io, math, pprint
+import openpyxl,  os, csv, chardet, urllib.parse, re, io, math
 
 
 UPLOAD_NOT_COMPLETED = 0
@@ -64,52 +61,6 @@ class HistoryListView(LoginRequiredMixin, ListView):
         context['page'] = 'TOP'
 
         return context
-
-
-class CustomerSelectAndFileUpLoadView(LoginRequiredMixin, CreateView):
-    form_class = CustomerSelectAndFileUpLoadMultiFrom
-    template_name = 'app/file_upload.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['status'] = UPLOAD_NOT_COMPLETED
-
-        return context
-
-    @transaction.atomic
-    def form_valid(self, form):
-        generated_data = form['generated_data'].save(commit=False)
-        staff = Staff.objects.get(staff=self.request.user)
-        generated_data.staff = staff
-        generated_data.status = UPLOAD_NOT_COMPLETED
-        generated_data.save()
-
-        matched_data = form['matched_data'].save(commit=False)
-        matched_data.generated = generated_data
-        staff = Staff.objects.get(staff=self.request.user)
-        matched_data.staff = staff
-        matched_data.generated.status = CSV_OUTPUT_COMPLETED
-        matched_data.save()
-
-        brycen_file_path = urllib.parse.unquote(matched_data.brycen_file.path)
-        billing_file_path = urllib.parse.unquote(matched_data.billing_file.path)
-        print('brycen_file_path:{}'.format(brycen_file_path))
-        print('billing_file_path:{}'.format(billing_file_path))
-
-        # ファイル命名
-        now = datetime.now()
-        file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
-
-        output_data = create_csv(brycen_file_path, billing_file_path)
-
-        # ファイルsave
-        matched_data.matched_data_file.save(file_name, ContentFile(output_data))
-
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        matched = self.object['matched_data']
-        return reverse('detail_and_create', kwargs={'pk': matched.id})
 
 
 class CustomerSelectAndBrycenFileUpLoadView(CreateView):
@@ -347,8 +298,6 @@ class BillingDataUpdateView(LoginRequiredMixin, UpdateView):
         generated = GeneratedData.objects.get(id=generated_data_pk)
         staff = Staff.objects.get(staff=self.request.user)
         billing_data = BillingData.objects.filter(matched_id=matched_data_pk)
-        for b in billing_data:
-            print(b.created_date)
 
         if 'save' in self.request.POST:
             generated.update_date = timezone.now()
@@ -1392,6 +1341,9 @@ def import_data_create(f):
         elif unit == '式':
             unit_code = '2'
 
+        elif unit == '月額':
+            unit_code = '3'
+
         elif unit == '立法メートル':
             unit_code = '4'
 
@@ -1484,12 +1436,10 @@ def import_data_create(f):
 
         #  単位がt(半角）だった場合
         elif unit == 't':
-            print('半角')
             kg_conversion()
 
         #  単位がt(全角）だった場合
         elif unit == 'ｔ':
-            print('全角')
             kg_conversion()
 
         #  単価が空で尚且つ、数量も空だった場合
@@ -1503,15 +1453,12 @@ def import_data_create(f):
                 l[UNIT_PRICE_LIST_INDEX] = total
                 l[AMOUNT_LIST_INDEX] = 1
                 l[REMARK_LIST_INDEX] = str(amount) + str(unit)
-                # l[UNIT_CODE_LIST_INDEX] = '単位を確認してください'
                 l[UNIT_CODE_LIST_INDEX] = '2'
 
             else:
                 l[UNIT_PRICE_LIST_INDEX] = total
                 l[AMOUNT_LIST_INDEX] = 1
                 l[REMARK_LIST_INDEX] = str(amount) + str(unit)
-
-
 
         ws.cell(column=1, row=i).value = l[STORE_CODE_LIST_INDEX]
         ws.cell(column=55, row=i).value = l[DAY_LIST_INDEX]
@@ -1555,7 +1502,6 @@ def import_data_create(f):
     return output_data
 
 
-
 class ImportDataDetailView(LoginRequiredMixin, DetailView):
     model = ImportData
     template_name = 'app/import_data_detail.html'
@@ -1574,8 +1520,3 @@ class ImportDataDetailView(LoginRequiredMixin, DetailView):
             context['billing'] = billing
         context['status'] = IMPORT_DATA_OUTPUT_COMPLETED
         return context
-
-
-
-
-

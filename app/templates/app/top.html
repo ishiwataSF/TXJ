@@ -4,7 +4,7 @@
 
 <div class="page-body" style="margin: auto; padding: 20px 20px 20px 30px;">
     <a href="{% url 'customer_brycen_file_select' %}" type="button" class="btn btn-outline-primary">新規案件を進める（開発中）</a><br><br>
-    <a href="{% url 'file_upload' %}" type="button" class="btn btn-outline-primary">新規案件を進める</a><br><br>
+   {% comment %} <a href="{% url 'file_upload' %}" type="button" class="btn btn-outline-primary">新規案件を進める</a><br><br>{% endcomment %}
     <ul class="nav nav-tabs" id="myTab" role="tablist">
       <li class="nav-item">
         <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">途中案件</a>
@@ -54,8 +54,7 @@
                     </td>
                     {% elif not m.billing_file and m.matched_data_file %}
                     <td>
-                        <span class="badge badge-pill badge-info">入力データあり</span>
-                        <a href="{%url 'detail_and_create' pk=m.pk %}">案件詳細を参照してください</a>
+                        <a href="{%url 'detail_and_create' pk=m.pk %}">入力データあり:案件詳細を参照してください</a>
                     </td>
                     {% else %}
                     <td>
@@ -107,8 +106,7 @@
                         <td><a href="{{ i.visually_matched.matched.billing_file.url }}">{{ i.visually_matched.matched.billing_filename }}</a></td>
                         {% else %}
                         <td>
-                            <span class="badge badge-pill badge-info">入力データあり</span>
-                            <a href="{% url 'import_data_detail' pk=i.pk %}">アップロード情報を参照してください。</a>
+                            <a href="{% url 'import_data_detail' pk=i.pk %}">入力データあり:アップロード情報を参照してください。</a>
                         </td>
                         {% endif %}
                         {% if i.visually_matched_file %}

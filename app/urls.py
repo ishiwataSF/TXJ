@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.staticfiles.urls import static
 from django.urls import path
 from .views import HistoryListView, ImportDataCreateView, ImportDataDetailView, \
-    LoginFormView, CustomerSelectAndFileUpLoadView,MatchedDataDetailAndVisuallyMatchedDataCreateView, logout,\
+    LoginFormView, MatchedDataDetailAndVisuallyMatchedDataCreateView, logout,\
     BillingDataCreateView, CustomerSelectAndBrycenFileUpLoadView, SelectFileOrBillingDataFormView, BillingDataDetailView,\
     BillingDataUpdateView
 
@@ -11,7 +11,6 @@ urlpatterns = [
     path('accounts/login/', LoginFormView.as_view(), name='login'),
     path('accounts/logout/',logout, name='logout'),
     path('', HistoryListView.as_view(), name='top'),
-    path('file_upload/', CustomerSelectAndFileUpLoadView.as_view(), name='file_upload'),
     path('customer_select/brycen_file_upload/', CustomerSelectAndBrycenFileUpLoadView.as_view(), name='customer_brycen_file_select'),
     path('matched_data/<int:pk>/', SelectFileOrBillingDataFormView.as_view(), name='select_billing_file_or_form'),
     path('matched_data/<int:pk>/billing_data/create/', BillingDataCreateView.as_view(), name='billing_data_create'),

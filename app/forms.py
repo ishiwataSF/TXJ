@@ -24,6 +24,7 @@ class UploadFileSelectForm(forms.ModelForm):
         widgets = {'brycen_file': forms.FileInput(attrs={'accept': '.xlsx'}),
                    'billing_file': forms.FileInput(attrs={'accept': '.csv'})}
 
+
 class BiilingFileUploadFrom(forms.ModelForm):
     def __init__(self, upload='False', *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -59,11 +60,8 @@ class ImportDataCreateForm(forms.ModelForm):
     def __init__(self, *args, method='GET', upload_and_create=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._upload_and_create = upload_and_create
-        #self._create = create
         if method =='POST' and not upload_and_create:
             del self.fields['visually_matched_file']
-        # print('self._upload_and_create:{}'.format(self._upload_and_create))
-        # print('self._create:{}'.format(self._create))
 
     def is_valid(self):
         valid = super().is_valid()
@@ -72,15 +70,6 @@ class ImportDataCreateForm(forms.ModelForm):
             self.add_error('visually_matched_file', e)
 
             return False
-
-        #elif valid and self._create and self.cleaned_data['visually_matched_file']:
-            #self.cleaned_data['visually_matched_file'] = ''
-            #print(valid)
-            #return valid
-            #e = ValidationError('ファイルを選択したまま、インポートデータ作成を押さないでください')
-            #self.add_error('visually_matched_file', e)
-
-            #return False
 
         return valid
 
@@ -93,7 +82,6 @@ class ImportDataCreateForm(forms.ModelForm):
 class CustomerSelectAndFileUpLoadMultiFrom(MultiModelForm):
     form_classes = {'generated_data': CustomerSelectForm,
                     'matched_data': UploadFileSelectForm}
-
 
     def save(self, commit=True):
         objects = super(CustomerSelectAndFileUpLoadMultiFrom, self).save(commit=False)
