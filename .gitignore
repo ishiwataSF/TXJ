@@ -14,3 +14,4 @@ fixtures/
 wsgi.py
 manage.py
 production_settings.py
+.idea/
