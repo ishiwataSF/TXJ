@@ -193,35 +193,6 @@ class BillingDataCreateView(LoginRequiredMixin, CreateView):
                 instance.matched = matched
                 instance.save()
 
-        elif 'save_and_create' in self.request.POST:
-            self._post_mode = 'SAVE_AND_CREATE'
-            print('save_and_create')
-            generated.status = CSV_OUTPUT_COMPLETED
-            generated.update_date = timezone.now()
-            generated.save()
-
-            instances = formset.save(commit=False)
-            for instance in instances:
-                instance.staff = staff
-                instance.matched = matched
-                instance.save()
-
-                if formset.deleted_objects:
-                    for delete in formset.deleted_objects:
-                        delete.delete()
-
-                billing_data = BillingData.objects.filter(matched_id=matched_data_pk)
-                brycen_file_path = urllib.parse.unquote(matched.brycen_file.path)
-
-                # ファイル命名
-                now = datetime.now()
-                file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
-
-                output_data = create_csv_from_billing_data(billing_data, brycen_file_path)
-
-                # ファイルsave
-                matched.matched_data_file.save(file_name, ContentFile(output_data))
-
         return super().form_valid(formset)
 
     def get_success_url(self):
@@ -268,6 +239,29 @@ class BillingDataDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
+    def post(self, request, *args, **kwargs):
+        matched_data_pk = self.kwargs['matched_data_pk']
+        matched = MatchedData.objects.get(id=matched_data_pk)
+        generated = matched.generated
+        brycen_file_path = urllib.parse.unquote(matched.brycen_file.path)
+        billing_data = BillingData.objects.filter(matched_id=matched_data_pk)
+
+        if 'create' in self.request.POST:
+            generated.status = CSV_OUTPUT_COMPLETED
+            generated.save()
+
+            # ファイル命名
+            now = datetime.now()
+            file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
+
+            output_data = create_csv_from_billing_data(billing_data, brycen_file_path)
+
+            # ファイルsave
+            matched.matched_data_file.save(file_name, ContentFile(output_data))
+
+            return HttpResponseRedirect(reverse('detail_and_create', kwargs={'pk': matched_data_pk}))
+
+
 class BillingDataUpdateView(LoginRequiredMixin, UpdateView):
     form_class = BillingDataFrom
     template_name = 'app/billing_data.html'
@@ -310,35 +304,6 @@ class BillingDataUpdateView(LoginRequiredMixin, UpdateView):
                 instance.matched = matched
                 instance.save()
 
-        if 'save_and_create' in self.request.POST:
-            print('save_and_create')
-            generated.status = CSV_OUTPUT_COMPLETED
-            generated.update_date = timezone.now()
-            generated.save()
-
-            instances = formset.save(commit=False)
-            for instance in instances:
-                instance.staff = staff
-                instance.create_date = timezone.now()
-                instance.matched = matched
-                instance.save()
-
-            if formset.deleted_objects:
-                for delete in formset.deleted_objects:
-                    delete.delete()
-
-            brycen_file_path = urllib.parse.unquote(matched.brycen_file.path)
-
-            # ファイル命名
-            now = datetime.now()
-            file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
-
-            output_data = create_csv_from_billing_data(billing_data, brycen_file_path)
-
-            # ファイルsave
-            matched.matched_data_file.save(file_name, ContentFile(output_data))
-
-            return HttpResponseRedirect(reverse('detail_and_create', kwargs={'pk': matched_data_pk}))
 
         return super().form_valid(formset)
 
