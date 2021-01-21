@@ -782,8 +782,11 @@ def create_csv(f, f2):
                             key_split = key.split('-')
                             customer_code = key_split[0]
                             store_code = key_split[1]
+
+                # 部門コードが文字化け＆部門名なしだったら、文字化けした値を反映させる。
                 else:
-                    store_nam = '未入力'
+                    customer_code = store_code
+                    store_code = store_code
 
             else:
                 customer_code = store_split[0]
