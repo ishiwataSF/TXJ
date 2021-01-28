@@ -238,7 +238,6 @@ class BillingDataDetailView(LoginRequiredMixin, DetailView):
 
         return context
 
-
     def post(self, request, *args, **kwargs):
         matched_data_pk = self.kwargs['matched_data_pk']
         matched = MatchedData.objects.get(id=matched_data_pk)
@@ -246,20 +245,19 @@ class BillingDataDetailView(LoginRequiredMixin, DetailView):
         brycen_file_path = urllib.parse.unquote(matched.brycen_file.path)
         billing_data = BillingData.objects.filter(matched_id=matched_data_pk)
 
-        if 'create' in self.request.POST:
-            generated.status = CSV_OUTPUT_COMPLETED
-            generated.save()
+        generated.status = CSV_OUTPUT_COMPLETED
+        generated.save()
 
-            # ファイル命名
-            now = datetime.now()
-            file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
+        # ファイル命名
+        now = datetime.now()
+        file_name = 'TXJ_付け合わせ済_' + now.strftime('%Y年%m月%d日%H時%M分%S秒') + '_作成分)' + '.csv'
 
-            output_data = create_csv_from_billing_data(billing_data, brycen_file_path)
+        output_data = create_csv_from_billing_data(billing_data, brycen_file_path)
 
-            # ファイルsave
-            matched.matched_data_file.save(file_name, ContentFile(output_data))
+        # ファイルsave
+        matched.matched_data_file.save(file_name, ContentFile(output_data))
 
-            return HttpResponseRedirect(reverse('detail_and_create', kwargs={'pk': matched_data_pk}))
+        return HttpResponseRedirect(reverse('detail_and_create', kwargs={'pk': matched_data_pk}))
 
 
 class BillingDataUpdateView(LoginRequiredMixin, UpdateView):
@@ -524,7 +522,7 @@ def create_csv_from_billing_data(billing_data_queryset, brycen_file_path):
     writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
     writer.writerow(header)
     writer.writerows(writer_data)
-    output_data = output.getvalue() # .encode('cp932')
+    output_data = output.getvalue().encode('cp932')
 
     return output_data
 
