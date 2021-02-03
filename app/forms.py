@@ -2,7 +2,7 @@ from betterforms.multiform import MultiModelForm
 from django import forms
 from django.forms import modelformset_factory
 from django.core.exceptions import ValidationError
-from .models import GeneratedData, MatchedData, VisuallyMatchedData, ImportData, BillingData, Place
+from .models import Agent, BillingData, GeneratedData, MatchedData, VisuallyMatchedData, ImportData, Place
 
 
 class CustomerSelectForm(forms.ModelForm):
@@ -100,6 +100,7 @@ class BillingDataFrom(forms.ModelForm):
     def __init__(self, queryset=None, customer_id=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['total'].widget.attrs['readonly'] = 'readonly'
+        self.fields['agent'].queryset = Agent.objects.order_by('code')
         if customer_id:
             self.fields['place'].queryset = Place.objects.filter(customer_id=customer_id)
 
