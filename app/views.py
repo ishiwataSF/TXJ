@@ -182,32 +182,26 @@ class BillingDataCreateView(LoginRequiredMixin, CreateView):
         generated = GeneratedData.objects.get(id=generated_data_pk)
         staff = Staff.objects.get(staff=self.request.user)
 
-        if 'save' in self.request.POST:
-            self._post_mode = 'SAVE'
-            generated.update_date = timezone.now()
-            generated.save()
+        generated.update_date = timezone.now()
+        generated.save()
 
-            instances = formset.save(commit=False)
-            for instance in instances:
-                instance.staff = staff
-                instance.matched = matched
-                instance.save()
+        instances = formset.save(commit=False)
+        for instance in instances:
+            instance.staff = staff
+            instance.matched = matched
+            instance.save()
 
         return super().form_valid(formset)
 
     def get_success_url(self):
         matched_data_pk = self.kwargs['pk']
-        if self._post_mode == 'SAVE':
-            print('post_mode save')
-            matched = MatchedData.objects.get(pk=matched_data_pk)
-            billing = BillingData.objects.filter(matched_id=matched_data_pk)
-            billing_data_last_row_pk = billing.last().id
 
-            return reverse('billing_data_detail',
-                           kwargs={'matched_data_pk': matched.id, 'billing_data_last_row_pk': billing_data_last_row_pk})
-        else:
-            print('post_mode save_and_create')
-            return reverse('detail_and_create', kwargs={'pk': matched_data_pk})
+        matched = MatchedData.objects.get(pk=matched_data_pk)
+        billing = BillingData.objects.filter(matched_id=matched_data_pk)
+        billing_data_last_row_pk = billing.last().id
+
+        return reverse('billing_data_detail',
+                       kwargs={'matched_data_pk': matched.id, 'billing_data_last_row_pk': billing_data_last_row_pk})
 
 
 class BillingDataDetailView(LoginRequiredMixin, DetailView):
@@ -730,7 +724,16 @@ def create_csv(f, f2):
 
         store_code = row[BILLING_STORE_CODE_NUM]
         store_nam = row[BILLING_STORE_NAM_NUM]
-        billing_date = row[BILLING_DAY_NUM]
+        if row[BILLING_DAY_NUM]:
+            date_split = row[BILLING_DAY_NUM].split('/')
+            y = date_split[0]
+            m = date_split[1]
+            d = date_split[2]
+            date_str = f'{y}-{m}-{d}'
+            tdatetime = datetime.strptime(date_str, '%Y-%m-%d')
+            billing_date = '{0:%Y/%m/%d}'.format(tdatetime)
+           # billing_date = row[BILLING_DAY_NUM]
+
         pt_code = int(row[BILLING_PT_CODE_NUM])
         pt_nam = row[BILLING_PT_NAM_NUM]
         item_nam = row[BILLING_ITEM_NAM_NUM]
